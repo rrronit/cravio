@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Cravio",
+    "slug": "cravio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "cravio",
+    "splash": {
+      "backgroundColor": "#F7F6F1"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cravio.app"
+    },
+    "android": {
+      "package": "com.cravio.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F6F1"
+      }
+    }
+  }
+}
