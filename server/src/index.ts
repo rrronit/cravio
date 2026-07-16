@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { importJobs, normalizeIngredient, pantry, recipes, recommendations } from './data/store.js';
 
@@ -17,7 +18,7 @@ app.post('/imports', (req, res) => {
   if (input.data.url.includes('instagram.com')) platform = 'Instagram';
   else if (input.data.url.includes('tiktok.com')) platform = 'TikTok';
   else if (input.data.url.includes('youtube.com') || input.data.url.includes('youtu.be')) platform = 'YouTube';
-  const job = { id: `imp_${Date.now()}`, url: input.data.url, platform, status: 'queued', progress: 0, createdAt: new Date().toISOString() };
+  const job = { id: `imp_${randomUUID()}`, url: input.data.url, platform, status: 'queued', progress: 0, createdAt: new Date().toISOString() };
   importJobs.unshift(job);
   res.status(202).json(job);
 });
@@ -25,6 +26,19 @@ app.post('/imports', (req, res) => {
 app.get('/imports/:id', (req, res) => {
   const job = importJobs.find((item) => item.id === req.params.id);
   if (!job) return res.status(404).json({ error: 'Import job not found.' });
+  const age = Date.now() - Date.parse(job.createdAt);
+  if (age > 2500 && job.status !== 'ready') {
+    const imported = {
+      ...recipes[2], id: randomUUID(), title: 'Imported Recipe', sourceUrl: job.url, platform: job.platform,
+      favorite: false, confidence: 0.72, warnings: ['This demo extraction should be reviewed before cooking.'], importedAt: new Date().toISOString(),
+    };
+    recipes.unshift(imported);
+    job.status = 'ready'; job.progress = 100; job.recipeId = imported.id;
+  } else if (age > 1200) {
+    job.status = 'generating_recipe'; job.progress = 72;
+  } else if (age > 300) {
+    job.status = 'extracting'; job.progress = 35;
+  }
   res.json(job);
 });
 
@@ -47,9 +61,15 @@ app.get('/recipes/:id', (req, res) => {
 app.put('/recipes/:id', (req, res) => {
   const index = recipes.findIndex((item) => item.id === req.params.id);
   if (index < 0) return res.status(404).json({ error: 'Recipe not found.' });
-  const protectedFields = ['id', 'importedAt'];
-  const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => !protectedFields.includes(key)));
-  recipes[index] = { ...recipes[index], ...updates };
+  const ingredient = z.object({ name: z.string().min(1), quantity: z.string().min(1), optional: z.boolean().optional() });
+  const updates = z.object({
+    title: z.string().min(1), description: z.string(), creator: z.string(), sourceUrl: z.string().url(),
+    prepTime: z.number().nonnegative(), cookTime: z.number().nonnegative(), servings: z.number().int().positive(),
+    cuisine: z.string(), difficulty: z.string(), tags: z.array(z.string()), ingredients: z.array(ingredient).min(1),
+    instructions: z.array(z.string().min(1)).min(1), favorite: z.boolean(), warnings: z.array(z.string()),
+  }).partial().safeParse(req.body);
+  if (!updates.success) return res.status(400).json({ error: 'Invalid recipe update.', details: updates.error.flatten() });
+  recipes[index] = { ...recipes[index], ...updates.data };
   res.json(recipes[index]);
 });
 
@@ -76,7 +96,7 @@ app.get('/pantry', (_req, res) => res.json({ data: pantry.filter((item) => item.
 app.post('/pantry', (req, res) => {
   const input = z.object({ name: z.string().min(1), quantity: z.number().positive().optional(), unit: z.string().optional(), expiry: z.string().optional() }).safeParse(req.body);
   if (!input.success) return res.status(400).json({ error: 'Invalid pantry item.', details: input.error.flatten() });
-  const item = { id: `pan_${Date.now()}`, available: true, ...input.data };
+  const item = { id: `pan_${randomUUID()}`, available: true, ...input.data };
   pantry.unshift(item);
   res.status(201).json(item);
 });
@@ -84,7 +104,9 @@ app.post('/pantry', (req, res) => {
 app.put('/pantry/:id', (req, res) => {
   const index = pantry.findIndex((item) => item.id === req.params.id);
   if (index < 0) return res.status(404).json({ error: 'Pantry item not found.' });
-  pantry[index] = { ...pantry[index], ...req.body, id: pantry[index].id };
+  const updates = z.object({ name: z.string().min(1), quantity: z.number().positive(), unit: z.string().min(1), expiry: z.string(), available: z.boolean() }).partial().safeParse(req.body);
+  if (!updates.success) return res.status(400).json({ error: 'Invalid pantry update.', details: updates.error.flatten() });
+  pantry[index] = { ...pantry[index], ...updates.data, id: pantry[index].id };
   res.json(pantry[index]);
 });
 
@@ -96,11 +118,17 @@ app.delete('/pantry/:id', (req, res) => {
 });
 
 app.get('/recommendations', (req, res) => {
-  const category = req.query.category ? String(req.query.category) : undefined;
+  const parsedCategory = z.enum(['can_make_now', 'almost_ready', 'best_matches', 'need_shopping']).optional().safeParse(req.query.category ? String(req.query.category) : undefined);
+  if (!parsedCategory.success) return res.status(400).json({ error: 'Unknown recommendation category.' });
+  const category = parsedCategory.data;
   const data = recommendations().filter((item) => !category || item.category === category);
   res.json({ data, total: data.length });
 });
 
 app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(error);
+  res.status(400).json({ error: 'The request could not be processed.' });
+});
 
 app.listen(port, () => console.log(`Cravio API listening on http://localhost:${port}`));
