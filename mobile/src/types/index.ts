@@ -10,6 +10,7 @@ export type Recipe = {
   description: string;
   creator: string;
   platform: 'Instagram' | 'TikTok' | 'YouTube';
+  sourceUrl: string;
   image: string;
   time: number;
   prepTime: number;

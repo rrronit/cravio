@@ -2,7 +2,7 @@ import { PantryItem, Recipe } from '../types';
 
 export const recipes: Recipe[] = [
   {
-    id: '1', title: 'Creamy Tuscan Chicken', creator: '@themoderncook', platform: 'Instagram',
+    id: '1', title: 'Creamy Tuscan Chicken', creator: '@themoderncook', platform: 'Instagram', sourceUrl: 'https://www.instagram.com/',
     description: 'Golden chicken in a silky sun-dried tomato and spinach sauce.',
     image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1000&q=85',
     time: 28, prepTime: 10, servings: 4, difficulty: 'Easy', cuisine: 'Italian',
@@ -16,7 +16,7 @@ export const recipes: Recipe[] = [
     favorite: true, match: 83, missing: ['Sun-dried tomatoes'], note: 'Try with coconut cream for a lighter version.',
   },
   {
-    id: '2', title: 'Paneer Tikka Bowl', creator: '@spiceandtwice', platform: 'Instagram',
+    id: '2', title: 'Paneer Tikka Bowl', creator: '@spiceandtwice', platform: 'Instagram', sourceUrl: 'https://www.instagram.com/',
     description: 'Smoky paneer, crunchy vegetables and mint yogurt over fragrant rice.',
     image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=1000&q=85',
     time: 25, prepTime: 15, servings: 2, difficulty: 'Easy', cuisine: 'Indian',
@@ -30,7 +30,7 @@ export const recipes: Recipe[] = [
     favorite: false, match: 83, missing: ['Capsicum'],
   },
   {
-    id: '3', title: 'Miso Butter Noodles', creator: '@halfbakedharvest', platform: 'TikTok',
+    id: '3', title: 'Miso Butter Noodles', creator: '@halfbakedharvest', platform: 'TikTok', sourceUrl: 'https://www.tiktok.com/',
     description: 'Glossy, savory noodles with a deeply comforting miso butter sauce.',
     image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1000&q=85',
     time: 15, prepTime: 5, servings: 2, difficulty: 'Easy', cuisine: 'Asian',
@@ -44,7 +44,7 @@ export const recipes: Recipe[] = [
     favorite: true, match: 100, missing: [],
   },
   {
-    id: '4', title: 'Crispy Smashed Potatoes', creator: '@feelgoodfoodie', platform: 'YouTube',
+    id: '4', title: 'Crispy Smashed Potatoes', creator: '@feelgoodfoodie', platform: 'YouTube', sourceUrl: 'https://www.youtube.com/shorts/',
     description: 'Craggy, golden potatoes with a bright garlic herb drizzle.',
     image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=1000&q=85',
     time: 40, prepTime: 8, servings: 4, difficulty: 'Easy', cuisine: 'Modern',
@@ -57,7 +57,7 @@ export const recipes: Recipe[] = [
     favorite: false, match: 100, missing: [],
   },
   {
-    id: '5', title: 'Mango Chia Breakfast', creator: '@plantyou', platform: 'Instagram',
+    id: '5', title: 'Mango Chia Breakfast', creator: '@plantyou', platform: 'Instagram', sourceUrl: 'https://www.instagram.com/',
     description: 'A sunny make-ahead breakfast with coconut and fresh mango.',
     image: 'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?auto=format&fit=crop&w=1000&q=85',
     time: 8, prepTime: 8, servings: 2, difficulty: 'Easy', cuisine: 'Modern',
@@ -70,7 +70,7 @@ export const recipes: Recipe[] = [
     favorite: false, match: 50, missing: ['Coconut milk', 'Maple syrup'],
   },
   {
-    id: '6', title: 'Hot Honey Salmon', creator: '@moribyan', platform: 'TikTok',
+    id: '6', title: 'Hot Honey Salmon', creator: '@moribyan', platform: 'TikTok', sourceUrl: 'https://www.tiktok.com/',
     description: 'Caramelized salmon with a spicy-sweet glaze and lime.',
     image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=85',
     time: 22, prepTime: 8, servings: 2, difficulty: 'Medium', cuisine: 'American',
