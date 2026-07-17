@@ -9,7 +9,7 @@
     {
       "binding": "DB",
       "database_name": "cravio-db",
-      // Replaced automatically by `wrangler d1 create cravio-db --binding DB --update-config`.
+      // Replaced automatically by `wrangler d1 create cravio-db --binding DB --update-config -c server/wrangler.jsonc`.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "preview_database_id": "cravio-local-db",
       "migrations_dir": "migrations"

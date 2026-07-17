@@ -32,7 +32,7 @@ Authenticate Wrangler, create the production D1 database, apply its migrations, 
 
 ```bash
 npx wrangler login
-npx wrangler d1 create cravio-db --binding DB --location apac --update-config
+npx wrangler d1 create cravio-db --binding DB --location apac --update-config -c server/wrangler.jsonc
 npm run db:migrate:remote -w server
 npm run deploy -w server
 ```
