@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import type { ApiStepLogger } from '../lib/logger';
 
 export type Bindings = {
   DB: D1Database;
@@ -11,6 +12,8 @@ export type AppEnv = {
   Bindings: Bindings;
   Variables: {
     userId: string;
+    requestId: string;
+    logStep: ApiStepLogger;
   };
 };
 
