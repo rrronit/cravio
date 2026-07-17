@@ -6,6 +6,7 @@ Cravio turns recipe reels into a structured personal cookbook and recommends wha
 
 ```bash
 npm install
+npm run db:migrate:local -w server
 npm run server
 ```
 
@@ -27,11 +28,13 @@ EXPO_PUBLIC_API_URL=https://cravio-api.<your-subdomain>.workers.dev npm run mobi
 
 ## Deploy the API to Cloudflare
 
-Authenticate Wrangler once, then deploy:
+Authenticate Wrangler, create the production D1 database, apply its migrations, then deploy:
 
 ```bash
 npx wrangler login
+npx wrangler d1 create cravio-db --binding DB --location apac --update-config
+npm run db:migrate:remote -w server
 npm run deploy -w server
 ```
 
-Cloudflare uses [`server/wrangler.jsonc`](server/wrangler.jsonc) as the Worker configuration. The current in-memory seed store is intended for the MVP demo; connect D1 or Durable Objects before relying on persistent production writes.
+Cloudflare uses [`server/wrangler.jsonc`](server/wrangler.jsonc) as the Worker configuration. The create command replaces the placeholder database ID with the real D1 UUID. Versioned migrations in [`server/migrations`](server/migrations) create and seed recipes, pantry items, import jobs, and import event history.
