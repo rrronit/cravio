@@ -6,6 +6,7 @@ import { colors, shadow } from '../theme';
 type Props = { recipe: Recipe; onPress: () => void; onFavorite?: () => void; compact?: boolean };
 
 export function RecipeCard({ recipe, onPress, onFavorite, compact }: Props) {
+  const styles = createStyles();
   if (compact) {
     return (
       <Pressable style={styles.compact} onPress={onPress}>
@@ -48,7 +49,7 @@ export function RecipeCard({ recipe, onPress, onFavorite, compact }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   card: { width: 265, backgroundColor: colors.surface, borderRadius: 24, overflow: 'hidden', ...shadow },
   image: { height: 176, padding: 12 }, imageRadius: { borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -61,4 +62,4 @@ const styles = StyleSheet.create({
   compact: { backgroundColor: colors.surface, borderRadius: 19, padding: 10, flexDirection: 'row', alignItems: 'center', marginBottom: 10, ...shadow },
   compactImage: { width: 78, height: 78, borderRadius: 14 }, compactBody: { flex: 1, paddingHorizontal: 13, gap: 5 },
   compactTitle: { color: colors.ink, fontSize: 15, lineHeight: 19, fontWeight: '800' }, matchRow: { flexDirection: 'row', alignItems: 'center', gap: 5 }, matchText: { color: colors.green, fontSize: 11, fontWeight: '700' },
-});
+}); }

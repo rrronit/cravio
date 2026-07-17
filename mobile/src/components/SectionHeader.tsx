@@ -5,6 +5,7 @@ import { colors } from '../theme';
 type Props = { title: string; subtitle?: string; action?: string; onPress?: () => void };
 
 export function SectionHeader({ title, subtitle, action = 'See all', onPress }: Props) {
+  const styles = createStyles();
   return (
     <View style={styles.row}>
       <View style={{ flex: 1 }}>
@@ -21,10 +22,10 @@ export function SectionHeader({ title, subtitle, action = 'See all', onPress }: 
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 14 },
   title: { fontSize: 23, lineHeight: 28, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 },
   subtitle: { color: colors.muted, fontSize: 13, marginTop: 3 },
   action: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingBottom: 3 },
   actionText: { fontSize: 13, fontWeight: '700', color: colors.green },
-});
+}); }

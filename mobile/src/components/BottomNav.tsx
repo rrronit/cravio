@@ -12,13 +12,14 @@ const tabs: { name: TabName; icon: keyof typeof Feather.glyphMap }[] = [
 
 export function BottomNav({ active, onChange }: Props) {
   const insets = useSafeAreaInsets();
+  const styles = createStyles();
   return (
     <View style={[styles.shell, { height: 71 + insets.bottom, paddingBottom: Math.max(10, insets.bottom) }]}>
       {tabs.map((tab) => {
         const selected = active === tab.name;
         if (tab.name === 'Import') return (
           <Pressable key={tab.name} style={styles.importWrap} onPress={() => onChange(tab.name)}>
-            <View style={styles.import}><Ionicons name="add" size={30} color={colors.surface} /></View>
+            <View style={styles.import}><Ionicons name="add" size={30} color={colors.onPrimary} /></View>
             <Text style={styles.label}>Import</Text>
           </Pressable>
         );
@@ -33,9 +34,9 @@ export function BottomNav({ active, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles() { return StyleSheet.create({
   shell: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 86, paddingBottom: 15, paddingHorizontal: 10, backgroundColor: colors.surface, borderTopLeftRadius: 25, borderTopRightRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', ...shadow },
   item: { width: 64, height: 58, alignItems: 'center', justifyContent: 'center', gap: 4 }, label: { fontSize: 10, fontWeight: '700', color: '#89928D' }, activeLabel: { color: colors.green },
   activePill: { backgroundColor: colors.greenSoft, borderRadius: 13, height: 30, minWidth: 45, alignItems: 'center', justifyContent: 'center' },
   importWrap: { width: 66, alignItems: 'center', marginTop: -28, gap: 4 }, import: { width: 58, height: 58, borderRadius: 21, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', borderWidth: 5, borderColor: colors.background },
-});
+}); }
