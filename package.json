@@ -4,7 +4,7 @@
   "workspaces": ["mobile", "server"],
   "scripts": {
     "mobile": "npm run start -w mobile",
-    "server": "npm run dev -w server",
+    "server": "npm run db:migrate:local -w server && npm run dev -w server",
     "typecheck": "npm run typecheck -w mobile && npm run typecheck -w server"
   }
 }

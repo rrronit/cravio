@@ -3,9 +3,10 @@ import type { ApiStepLogger } from '../lib/logger';
 
 export type Bindings = {
   DB: D1Database;
-  EMAIL: SendEmail;
+  EMAIL?: SendEmail;
   AUTH_SECRET: string;
   EMAIL_FROM: string;
+  ENVIRONMENT: 'development' | 'production';
 };
 
 export type AppEnv = {

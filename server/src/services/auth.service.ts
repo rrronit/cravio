@@ -17,6 +17,7 @@ export const createAuthService = (
   users: UserRepository,
   mail: EmailService,
   secret: string,
+  environment: 'development' | 'production',
 ) => {
   const requireSecret = () => {
     if (!secret || secret.length < 32) throw createAppError(503, 'Authentication is not configured.');
@@ -36,7 +37,7 @@ export const createAuthService = (
   };
 
   return {
-    requestOtp: async (email: string): Promise<void> => {
+    requestOtp: async (email: string): Promise<{ devCode?: string }> => {
       requireSecret();
       const now = Math.floor(Date.now() / 1000);
       const current = await auth.findChallenge(email);
@@ -71,6 +72,7 @@ export const createAuthService = (
         await auth.deleteChallenge(challenge.id);
         throw createAppError(503, 'The sign-in email could not be sent.');
       }
+      return environment === 'development' ? { devCode: code } : {};
     },
 
     verifyOtp: async (email: string, code: string): Promise<AuthResult> => {

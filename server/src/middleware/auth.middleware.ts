@@ -24,8 +24,9 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   const auth = createAuthService(
     createAuthRepository(c.env.DB),
     createUserRepository(c.env.DB),
-    createEmailService(c.env.EMAIL, c.env.EMAIL_FROM),
+    createEmailService(c.env.EMAIL, c.env.EMAIL_FROM, c.env.ENVIRONMENT),
     c.env.AUTH_SECRET,
+    c.env.ENVIRONMENT,
   );
   try {
     const user = await auth.me(c.req.header('Authorization') ?? null);

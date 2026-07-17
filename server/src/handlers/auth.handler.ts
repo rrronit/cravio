@@ -10,8 +10,9 @@ import { logApiStep } from '../lib/auth';
 const services = (c: AppContext) => createAuthService(
   createAuthRepository(c.env.DB),
   createUserRepository(c.env.DB),
-  createEmailService(c.env.EMAIL, c.env.EMAIL_FROM),
+  createEmailService(c.env.EMAIL, c.env.EMAIL_FROM, c.env.ENVIRONMENT),
   c.env.AUTH_SECRET,
+  c.env.ENVIRONMENT,
 );
 
 export async function requestOtp(c: AppContext) {
@@ -23,11 +24,12 @@ export async function requestOtp(c: AppContext) {
   }
   logApiStep(c, 'auth.otp_request.validation_succeeded');
   logApiStep(c, 'auth.otp_request.email_send_started');
-  await services(c).requestOtp(input.data.email);
+  const result = await services(c).requestOtp(input.data.email);
   logApiStep(c, 'auth.otp_request.email_send_completed');
   return c.json({
     message: 'If the address can receive email, a sign-in code has been sent.',
     expiresIn: 600,
+    ...result,
   }, 202);
 }
 

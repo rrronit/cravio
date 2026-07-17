@@ -1,5 +1,20 @@
-export const createEmailService = (email: SendEmail, from: string) => ({
+export const createEmailService = (
+  email: SendEmail | undefined,
+  from: string,
+  environment: 'development' | 'production',
+) => ({
   sendOtp: async (to: string, code: string): Promise<void> => {
+    if (environment === 'development') {
+      console.info(JSON.stringify({
+        event: 'auth.otp.development_code',
+        email: to,
+        code,
+        warning: 'Development only. This code is never logged in production.',
+      }));
+      return;
+    }
+
+    if (!email) throw new Error('Cloudflare Email Service binding is not configured.');
     await email.send({
       to,
       from,

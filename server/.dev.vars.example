@@ -1,0 +1,2 @@
+ENVIRONMENT="development"
+AUTH_SECRET="replace-with-a-local-secret-at-least-32-characters-long"
