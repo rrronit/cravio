@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { AppError } from './models/error.model';
+import { isAppError } from './models/error.model';
 import type { AppEnv } from './models/app.model';
 import { logApiError } from './lib/logger';
 import { importRoutes } from './routes/import.routes';
@@ -30,7 +30,7 @@ app.route('/users', userRoutes);
 app.notFound((c) => c.json({ error: 'Route not found.' }, 404));
 
 app.onError((error, c) => {
-  if (error instanceof AppError) {
+  if (isAppError(error)) {
     return c.json({ error: error.message, details: error.details }, error.status);
   }
   logApiError(error);

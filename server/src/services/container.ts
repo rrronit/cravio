@@ -1,29 +1,29 @@
-import { ImportRepository } from '../repositories/import.repository';
-import { PantryRepository } from '../repositories/pantry.repository';
-import { RecipeRepository } from '../repositories/recipe.repository';
-import { UserRepository } from '../repositories/user.repository';
-import { HealthService } from './health.service';
-import { ImportService } from './import.service';
-import { IngredientService } from './ingredient.service';
-import { PantryService } from './pantry.service';
-import { RecipeService } from './recipe.service';
-import { RecommendationService } from './recommendation.service';
-import { UserService } from './user.service';
+import { createImportRepository } from '../repositories/import.repository';
+import { createPantryRepository } from '../repositories/pantry.repository';
+import { createRecipeRepository } from '../repositories/recipe.repository';
+import { createUserRepository } from '../repositories/user.repository';
+import { createHealthService } from './health.service';
+import { createImportService } from './import.service';
+import { createIngredientService } from './ingredient.service';
+import { createPantryService } from './pantry.service';
+import { createRecipeService } from './recipe.service';
+import { createRecommendationService } from './recommendation.service';
+import { createUserService } from './user.service';
 
-export function createServices(db: D1Database) {
-  const recipes = new RecipeRepository(db);
-  const pantry = new PantryRepository(db);
-  const imports = new ImportRepository(db);
-  const users = new UserRepository(db);
+export const createServices = (db: D1Database) => {
+  const recipes = createRecipeRepository(db);
+  const pantry = createPantryRepository(db);
+  const imports = createImportRepository(db);
+  const users = createUserRepository(db);
   return {
-    health: new HealthService(db),
-    recipes: new RecipeService(recipes),
-    pantry: new PantryService(pantry),
-    imports: new ImportService(imports, recipes),
-    ingredients: new IngredientService(recipes),
-    recommendations: new RecommendationService(recipes, pantry),
-    users: new UserService(users),
+    health: createHealthService(db),
+    recipes: createRecipeService(recipes),
+    pantry: createPantryService(pantry),
+    imports: createImportService(imports, recipes),
+    ingredients: createIngredientService(recipes),
+    recommendations: createRecommendationService(recipes, pantry),
+    users: createUserService(users),
   };
-}
+};
 
 export type Services = ReturnType<typeof createServices>;
