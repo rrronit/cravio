@@ -26,6 +26,14 @@ The mobile import screen talks to that API. iOS Simulator and Android Emulator u
 EXPO_PUBLIC_API_URL=https://cravio-api.<your-subdomain>.workers.dev npm run mobile
 ```
 
+Recipes and imports are scoped by the `X-User-Id` request header. The mobile app uses `demo-user` by default; set a real user when authentication is connected:
+
+```bash
+EXPO_PUBLIC_USER_ID=usr_your_user_id npm run mobile
+```
+
+Create a user with `POST /users`, read it with `GET /users/:id`, and list its cookbook with `GET /users/:id/recipes`.
+
 ## Deploy the API to Cloudflare
 
 Authenticate Wrangler, create the production D1 database, apply its migrations, then deploy:
@@ -38,3 +46,5 @@ npm run deploy -w server
 ```
 
 Cloudflare uses [`server/wrangler.jsonc`](server/wrangler.jsonc) as the Worker configuration. The create command replaces the placeholder database ID with the real D1 UUID. Versioned migrations in [`server/migrations`](server/migrations) create and seed recipes, pantry items, import jobs, and import event history.
+
+The backend layering and dependency rules are documented in [`server/README.md`](server/README.md).

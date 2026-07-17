@@ -3,6 +3,7 @@ import { Recipe } from '../types';
 
 const localApi = Platform.OS === 'android' ? 'http://10.0.2.2:8787' : 'http://localhost:8787';
 export const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || localApi;
+const USER_ID = process.env.EXPO_PUBLIC_USER_ID || 'demo-user';
 
 type ImportEvent = { status: string; progress: number; at: string; message: string };
 export type ImportJob = {
@@ -45,7 +46,7 @@ export async function getImportedRecipe(id: string, signal?: AbortSignal): Promi
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { 'content-type': 'application/json', ...init.headers },
+    headers: { 'content-type': 'application/json', 'x-user-id': USER_ID, ...init.headers },
   });
   const body = await response.json();
   if (!response.ok) throw new Error(body?.error || `Request failed with ${response.status}`);
