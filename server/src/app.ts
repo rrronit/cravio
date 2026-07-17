@@ -12,6 +12,9 @@ import { recommendationRoutes } from './routes/recommendation.routes';
 import { systemRoutes } from './routes/system.routes';
 import { userRoutes } from './routes/user.routes';
 import { authRoutes } from './routes/auth.routes';
+import { preferenceRoutes } from './routes/preference.routes';
+import { notificationRoutes } from './routes/notification.routes';
+import { shoppingListRoutes } from './routes/shopping-list.routes';
 import { requireAuth } from './middleware/auth.middleware';
 import { requestLogger } from './middleware/request-logger.middleware';
 
@@ -36,6 +39,9 @@ app.route('/ingredients', ingredientRoutes);
 app.route('/pantry', pantryRoutes);
 app.route('/recommendations', recommendationRoutes);
 app.route('/users', userRoutes);
+app.route('/preferences', preferenceRoutes);
+app.route('/notifications', notificationRoutes);
+app.route('/shopping-list', shoppingListRoutes);
 
 app.notFound((c) => {
   logApiStep(c, 'route.not_found', { status: 404 });

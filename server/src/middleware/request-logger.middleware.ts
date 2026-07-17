@@ -20,6 +20,6 @@ export const requestLogger = createMiddleware<AppEnv>(async (c, next) => {
 const normalizePath = (path: string): string => {
   if (/^\/users\/[^/]+\/recipes$/.test(path)) return '/users/:id/recipes';
   if (/^\/users\/[^/]+$/.test(path)) return '/users/:id';
-  if (/^\/(imports|recipes|pantry)\/[^/]+$/.test(path)) return path.replace(/\/[^/]+$/, '/:id');
+  if (/^\/(imports|recipes|pantry|shopping-list)\/[^/]+$/.test(path)) return path.replace(/\/[^/]+$/, '/:id');
   return path;
 };
