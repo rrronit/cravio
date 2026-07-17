@@ -10,16 +10,21 @@ import { recipeRoutes } from './routes/recipe.routes';
 import { recommendationRoutes } from './routes/recommendation.routes';
 import { systemRoutes } from './routes/system.routes';
 import { userRoutes } from './routes/user.routes';
+import { authRoutes } from './routes/auth.routes';
+import { requireAuth } from './middleware/auth.middleware';
 
 export const app = new Hono<AppEnv>();
 
 app.use('*', cors({
   origin: '*',
-  allowHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
+  allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }));
 
+app.use('*', requireAuth);
+
 app.route('/', systemRoutes);
+app.route('/auth', authRoutes);
 app.route('/imports', importRoutes);
 app.route('/recipes', recipeRoutes);
 app.route('/ingredients', ingredientRoutes);

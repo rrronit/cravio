@@ -5,7 +5,7 @@ import { normalizeIngredient } from './ingredient.service';
 
 export const createRecommendationService = (recipes: RecipeRepository, pantry: PantryRepository) => ({
   list: async (userId: string, category?: RecommendationCategory): Promise<Recommendation[]> => {
-    const [recipeList, pantryItems] = await Promise.all([recipes.findAll(userId), pantry.findAll(true)]);
+    const [recipeList, pantryItems] = await Promise.all([recipes.findAll(userId), pantry.findAll(userId, true)]);
     const owned = new Set(pantryItems.map((item) => normalizeIngredient(item.name)));
     return recipeList.map((recipe): Recommendation => {
       const required = recipe.ingredients.filter((item) => !item.optional);

@@ -12,11 +12,11 @@ export async function createImport(c: AppContext) {
     return c.json({ error: 'A valid recipe video URL is required.', details: input.error.flatten() }, 400);
   }
   const services = createServices(c.env.DB);
-  const userId = currentUserId(c.req.raw);
+  const userId = currentUserId(c);
   await services.users.get(userId);
   return c.json(await services.imports.create(input.data, userId), 202);
 }
 
 export async function getImport(c: AppContext) {
-  return c.json(await createServices(c.env.DB).imports.getAndAdvance(c.req.param('id')!, currentUserId(c.req.raw)));
+  return c.json(await createServices(c.env.DB).imports.getAndAdvance(c.req.param('id')!, currentUserId(c)));
 }
