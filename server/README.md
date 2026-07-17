@@ -34,3 +34,24 @@ npm run server
 ```
 
 For production, create the D1 database, update the Wrangler binding, and apply remote migrations as described in the root README.
+
+## Email OTP authentication
+
+The auth API uses Cloudflare Email Service, D1, and opaque bearer sessions:
+
+```text
+POST /auth/otp/request  { "email": "person@example.com" }
+POST /auth/otp/verify   { "email": "person@example.com", "code": "123456" }
+GET  /auth/me           Authorization: Bearer <token>
+POST /auth/logout       Authorization: Bearer <token>
+```
+
+Before deploying:
+
+1. Onboard `cravio.app` under **Compute → Email Service → Email Sending** in Cloudflare, or change `EMAIL_FROM` in `wrangler.jsonc` to an address on an onboarded domain.
+2. Generate a random secret of at least 32 characters and store it with `npx wrangler secret put AUTH_SECRET -c server/wrangler.jsonc`.
+3. Apply the latest D1 migrations locally and remotely (`0004` adds auth storage; `0005` isolates pantry data by user).
+
+Do not put `AUTH_SECRET` in `wrangler.jsonc` or commit it. Local Email Service calls are simulated by default; set `remote: true` on the binding only when intentionally sending real test emails.
+
+Successful OTP requests return `{ "message": "...", "expiresIn": 600 }`. Successful verification returns `{ "token": "...", "expiresAt": "<ISO timestamp>", "user": { ... } }`. Send that token as `Authorization: Bearer <token>` for every domain API request. The legacy `X-User-Id` identity override is no longer accepted.
