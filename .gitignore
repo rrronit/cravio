@@ -3,6 +3,7 @@ node_modules
 .expo-shared
 dist
 web-build
+.wrangler
 .DS_Store
 *.log
 .env*
