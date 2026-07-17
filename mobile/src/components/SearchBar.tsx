@@ -26,5 +26,5 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search your cook
 function createStyles() { return StyleSheet.create({
   wrap: { height: 56, borderRadius: 18, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', paddingLeft: 18, paddingRight: 8, gap: 11, ...shadow },
   input: { flex: 1, fontSize: 15, color: colors.ink, height: '100%' },
-  filter: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  filter: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
 }); }

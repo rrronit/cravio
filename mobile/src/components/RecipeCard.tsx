@@ -55,7 +55,7 @@ function createStyles() { return StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   matchBadge: { height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: colors.orangeSoft, flexDirection: 'row', alignItems: 'center', gap: 6 },
   exactBadge: { backgroundColor: colors.greenSoft }, dot: { width: 7, height: 7, borderRadius: 4 }, badgeText: { color: colors.ink, fontSize: 11, fontWeight: '800' },
-  heart: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  heart: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   body: { padding: 16, paddingTop: 14 }, title: { color: colors.ink, fontSize: 17, fontWeight: '800', letterSpacing: -0.25 },
   creator: { color: colors.muted, fontSize: 12, marginTop: 4 }, footer: { borderTopWidth: 1, borderTopColor: colors.line, marginTop: 13, paddingTop: 11, flexDirection: 'row', gap: 15 },
   smallMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 }, meta: { color: colors.muted, fontSize: 12, fontWeight: '600' },

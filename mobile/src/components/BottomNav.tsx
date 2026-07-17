@@ -38,5 +38,5 @@ function createStyles() { return StyleSheet.create({
   shell: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 86, paddingBottom: 15, paddingHorizontal: 10, backgroundColor: colors.surface, borderTopLeftRadius: 25, borderTopRightRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', ...shadow },
   item: { width: 64, height: 58, alignItems: 'center', justifyContent: 'center', gap: 4 }, label: { fontSize: 10, fontWeight: '700', color: '#89928D' }, activeLabel: { color: colors.green },
   activePill: { backgroundColor: colors.greenSoft, borderRadius: 13, height: 30, minWidth: 45, alignItems: 'center', justifyContent: 'center' },
-  importWrap: { width: 66, alignItems: 'center', marginTop: -28, gap: 4 }, import: { width: 58, height: 58, borderRadius: 21, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center', borderWidth: 5, borderColor: colors.background },
+  importWrap: { width: 66, alignItems: 'center', marginTop: -28, gap: 4 }, import: { width: 58, height: 58, borderRadius: 21, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 5, borderColor: colors.background },
 }); }
