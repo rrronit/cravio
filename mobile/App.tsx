@@ -12,23 +12,55 @@ import { AuthScreen } from './src/components/AuthScreen';
 import { RecipeCard } from './src/components/RecipeCard';
 import { SearchBar } from './src/components/SearchBar';
 import { SectionHeader } from './src/components/SectionHeader';
-import { pantry as pantrySeed, recipes as recipeSeed } from './src/data/seed';
-import { AuthSession, createImport, getCurrentUser, getImportedRecipe, getImport, ImportJob, logoutSession, setAccessToken } from './src/services/api';
+import {
+  addShoppingListItem, AppNotification, AuthSession, createImport, createPantryItem, getCurrentUser, getImportedRecipe,
+  getImport, getPreferences, ImportJob, listNotifications, listPantry, listRecipes, listRecommendations,
+  logoutSession, markAllNotificationsRead, setAccessToken, updatePreferences, updateRecipeFavorite,
+} from './src/services/api';
 import { clearStoredSession, loadStoredSession, storeSession } from './src/services/session';
 import { applyTheme, colors, shadow } from './src/theme';
 import { PantryItem, Recipe, TabName } from './src/types';
 
 const contentWidth = { width: '100%' as const, maxWidth: 720, alignSelf: 'center' as const };
+type AuthIntent =
+  | { kind: 'tab'; tab: TabName }
+  | { kind: 'favorite'; recipeId: string }
+  | { kind: 'pantry' }
+  | { kind: 'shopping'; recipeId: string };
+const protectedTabs = new Set<TabName>(['Import', 'Pantry', 'Profile']);
+const mergeRecommendations = (recipes: Recipe[], recommendations: Recipe[]) => {
+  const recommendationById = new Map(recommendations.map((recipe) => [recipe.id, recipe]));
+  return recipes.map((recipe) => {
+    const recommendation = recommendationById.get(recipe.id);
+    return recommendation ? { ...recipe, match: recommendation.match, missing: recommendation.missing, ingredients: recommendation.ingredients } : recipe;
+  });
+};
 
 function BrandHeader({ title, subtitle, back, onBack }: { title?: string; subtitle?: string; back?: boolean; onBack?: () => void }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [hasUnread, setHasUnread] = useState(true);
-  const openNotifications = () => { setNotificationsOpen(true); setHasUnread(false); };
-  const notifications = [
-    { icon: 'check-circle', title: 'Recipe ready', body: 'Paneer Tikka Bowl was added to your cookbook.', time: '2m' },
-    { icon: 'clock', title: 'Use your spinach soon', body: 'It expires tomorrow. We found 2 recipes for it.', time: '1h' },
-    { icon: 'zap', title: 'You can cook this now', body: 'Miso Butter Noodles matches your pantry 100%.', time: '3h' },
-  ];
+  const [hasUnread, setHasUnread] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+  const openNotifications = async () => {
+    setNotificationsOpen(true);
+    setNotificationsLoading(true);
+    setNotificationsError('');
+    try {
+      const result = await listNotifications();
+      setNotifications(result.data);
+      setHasUnread(result.unread > 0);
+      if (result.unread > 0) {
+        await markAllNotificationsRead();
+        setNotifications(items => items.map(item => ({ ...item, read: true })));
+        setHasUnread(false);
+      }
+    } catch (error) {
+      setNotificationsError((error as Error).message);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
   return (
     <>
       <View style={styles.header}>
@@ -45,7 +77,7 @@ function BrandHeader({ title, subtitle, back, onBack }: { title?: string; subtit
           {title ? <Text style={styles.headerTitle}>{title}</Text> : null}
           {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
         </View>
-        <Pressable style={styles.iconButton} onPress={openNotifications} accessibilityRole="button" accessibilityLabel="Open notifications">
+        <Pressable style={styles.iconButton} onPress={() => void openNotifications()} accessibilityRole="button" accessibilityLabel="Open notifications">
           <Feather name="bell" size={20} color={colors.ink} />
           {hasUnread ? <View style={styles.notifyDot} /> : null}
         </Pressable>
@@ -59,14 +91,17 @@ function BrandHeader({ title, subtitle, back, onBack }: { title?: string; subtit
               <View><Text style={styles.modalTitle}>Notifications</Text><Text style={styles.modalSubtitle}>Fresh from your kitchen</Text></View>
               <Pressable style={styles.iconButton} onPress={() => setNotificationsOpen(false)} accessibilityRole="button" accessibilityLabel="Close notifications"><Feather name="x" size={20} color={colors.ink} /></Pressable>
             </View>
-            {notifications.map((item, index) => (
-              <Pressable key={item.title} style={styles.notificationItem} onPress={() => setNotificationsOpen(false)}>
+            {notificationsLoading ? <View style={styles.notificationState}><ActivityIndicator color={colors.green} /><Text style={styles.notificationStateText}>Loading your kitchen updates…</Text></View> : null}
+            {!notificationsLoading && notificationsError ? <View style={styles.notificationState}><Feather name="alert-circle" size={21} color={colors.red} /><Text style={styles.notificationStateText}>{notificationsError}</Text></View> : null}
+            {!notificationsLoading && !notificationsError && notifications.length === 0 ? <View style={styles.notificationState}><Feather name="check-circle" size={22} color={colors.green} /><Text style={styles.notificationStateText}>You're all caught up.</Text></View> : null}
+            {!notificationsLoading && notifications.map((item, index) => (
+              <Pressable key={item.id} style={styles.notificationItem} onPress={() => setNotificationsOpen(false)}>
                 <View style={[styles.notificationIcon, index === 1 && { backgroundColor: colors.orangeSoft }]}><Feather name={item.icon as any} size={20} color={index === 1 ? colors.orangeInk : colors.green} /></View>
                 <View style={{ flex: 1 }}><Text style={styles.notificationTitle}>{item.title}</Text><Text style={styles.notificationBody}>{item.body}</Text></View>
-                <Text style={styles.notificationTime}>{item.time}</Text>
+                <Text style={styles.notificationTime}>{formatRelativeTime(item.createdAt)}</Text>
               </Pressable>
             ))}
-            <Pressable style={styles.notificationAction} onPress={() => setNotificationsOpen(false)}><Text style={styles.notificationActionText}>You're all caught up</Text><Feather name="check" size={16} color={colors.green} /></Pressable>
+            {!notificationsLoading && !notificationsError ? <Pressable style={styles.notificationAction} onPress={() => setNotificationsOpen(false)}><Text style={styles.notificationActionText}>You're all caught up</Text><Feather name="check" size={16} color={colors.green} /></Pressable> : null}
           </View>
         </View>
       </Modal>
@@ -74,7 +109,15 @@ function BrandHeader({ title, subtitle, back, onBack }: { title?: string; subtit
   );
 }
 
-function HomeScreen({ recipes, onOpen, onTab, onFavorite }: { recipes: Recipe[]; onOpen: (r: Recipe) => void; onTab: (t: TabName) => void; onFavorite: (id: string) => void }) {
+const formatRelativeTime = (value: string) => {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return 'now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+  return `${Math.floor(seconds / 86400)}d`;
+};
+
+function HomeScreen({ recipes, viewerName, onOpen, onTab, onFavorite }: { recipes: Recipe[]; viewerName: string; onOpen: (r: Recipe) => void; onTab: (t: TabName) => void; onFavorite: (id: string) => void }) {
   const [query, setQuery] = useState('');
   const makeNow = recipes.filter((recipe) => recipe.match === 100);
   const recent = recipes.slice(0, 4);
@@ -83,8 +126,8 @@ function HomeScreen({ recipes, onOpen, onTab, onFavorite }: { recipes: Recipe[];
       <View style={styles.page}>
         <BrandHeader />
         <View style={styles.greetingRow}>
-          <View><Text style={styles.eyebrow}>GOOD EVENING, RONIT</Text><Text style={styles.heroTitle}>What are we{`\n`}cooking today?</Text></View>
-          <View style={styles.avatar}><Text style={styles.avatarText}>R</Text></View>
+          <View><Text style={styles.eyebrow}>GOOD EVENING, {viewerName.toUpperCase()}</Text><Text style={styles.heroTitle}>What are we{`\n`}cooking today?</Text></View>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{viewerName.charAt(0).toUpperCase()}</Text></View>
         </View>
         <SearchBar value={query} onChangeText={setQuery} placeholder="Search recipes or ingredients" onFilter={() => onTab('Cookbook')} />
         {query ? (
@@ -223,8 +266,7 @@ function PantryScreen({ pantry, onAdd }: { pantry: PantryItem[]; onAdd: () => vo
   </View></ScrollView>;
 }
 
-function ProfileScreen({ recipes, pantryCount, darkMode, session, onDarkModeChange, onLogout }: { recipes: Recipe[]; pantryCount: number; darkMode: boolean; session: AuthSession; onDarkModeChange: (value: boolean) => void; onLogout: () => void }) {
-  const [notifications, setNotifications] = useState(true);
+function ProfileScreen({ recipes, pantryCount, darkMode, notificationsEnabled, session, onDarkModeChange, onNotificationsChange, onLogout }: { recipes: Recipe[]; pantryCount: number; darkMode: boolean; notificationsEnabled: boolean; session: AuthSession; onDarkModeChange: (value: boolean) => void; onNotificationsChange: (value: boolean) => void; onLogout: () => void }) {
   const favoriteCount = recipes.filter(recipe => recipe.favorite).length;
   const displayName = session.user.name?.trim() || session.user.email.split('@')[0];
   const initial = displayName.charAt(0).toUpperCase();
@@ -232,13 +274,13 @@ function ProfileScreen({ recipes, pantryCount, darkMode, session, onDarkModeChan
   return <ScrollView contentContainerStyle={styles.scroll}><View style={styles.page}><BrandHeader /><View style={styles.profileTop}><View style={styles.profileAvatar}><Text style={styles.profileInitial}>{initial}</Text></View><Text style={styles.profileName}>{displayName}</Text><Text style={styles.profileEmail}>{session.user.email}</Text><View style={styles.memberBadge}><Ionicons name="sparkles" size={13} color={colors.onLime} /><Text style={styles.memberText}>CRAVIO EARLY TASTER</Text></View></View>
     <View style={styles.profileStats}><View><Text style={styles.profileStatNum}>{recipes.length}</Text><Text style={styles.profileStatText}>Recipes</Text></View><View><Text style={styles.profileStatNum}>{favoriteCount}</Text><Text style={styles.profileStatText}>Favorites</Text></View><View><Text style={styles.profileStatNum}>{pantryCount}</Text><Text style={styles.profileStatText}>Pantry items</Text></View></View>
     <Text style={styles.settingsLabel}>YOUR COOKBOOK</Text><View style={styles.settingsCard}>{rows.map(([icon, title, subtitle]) => <Pressable style={styles.settingRow} key={title}><View style={styles.settingIcon}><Feather name={icon as any} size={18} color={colors.green} /></View><View style={{ flex: 1 }}><Text style={styles.settingTitle}>{title}</Text><Text style={styles.settingSub}>{subtitle}</Text></View><Feather name="chevron-right" size={19} color={colors.muted} /></Pressable>)}</View>
-    <Text style={styles.settingsLabel}>PREFERENCES</Text><View style={styles.settingsCard}><View style={styles.settingRow}><View style={styles.settingIcon}><Feather name="bell" size={18} color={colors.green} /></View><View style={{ flex: 1 }}><Text style={styles.settingTitle}>Smart notifications</Text><Text style={styles.settingSub}>Recipe and pantry reminders</Text></View><Switch value={notifications} onValueChange={setNotifications} trackColor={{ false: colors.line, true: colors.green }} thumbColor={colors.onPrimary} /></View><View style={styles.settingRow}><View style={styles.settingIcon}><Feather name="moon" size={18} color={colors.green} /></View><View style={{ flex: 1 }}><Text style={styles.settingTitle}>Dark mode</Text><Text style={styles.settingSub}>{darkMode ? 'Easy on the eyes' : 'Switch to the midnight kitchen'}</Text></View><Switch value={darkMode} onValueChange={onDarkModeChange} trackColor={{ false: colors.line, true: colors.green }} thumbColor={colors.onPrimary} /></View></View>
+    <Text style={styles.settingsLabel}>PREFERENCES</Text><View style={styles.settingsCard}><View style={styles.settingRow}><View style={styles.settingIcon}><Feather name="bell" size={18} color={colors.green} /></View><View style={{ flex: 1 }}><Text style={styles.settingTitle}>Smart notifications</Text><Text style={styles.settingSub}>Recipe and pantry reminders</Text></View><Switch value={notificationsEnabled} onValueChange={onNotificationsChange} trackColor={{ false: colors.line, true: colors.green }} thumbColor={colors.onPrimary} /></View><View style={styles.settingRow}><View style={styles.settingIcon}><Feather name="moon" size={18} color={colors.green} /></View><View style={{ flex: 1 }}><Text style={styles.settingTitle}>Dark mode</Text><Text style={styles.settingSub}>{darkMode ? 'Easy on the eyes' : 'Switch to the midnight kitchen'}</Text></View><Switch value={darkMode} onValueChange={onDarkModeChange} trackColor={{ false: colors.line, true: colors.green }} thumbColor={colors.onPrimary} /></View></View>
     <Pressable style={styles.logoutButton} onPress={onLogout} accessibilityRole="button"><Feather name="log-out" size={18} color={colors.red} /><Text style={styles.logoutText}>Sign out</Text></Pressable>
     <Text style={styles.version}>Cravio 1.0 · Made for people who are always hungry</Text>
   </View></ScrollView>;
 }
 
-function RecipeDetail({ recipe, onBack, onFavorite }: { recipe: Recipe; onBack: () => void; onFavorite: () => void }) {
+function RecipeDetail({ recipe, onBack, onFavorite, onShoppingList }: { recipe: Recipe; onBack: () => void; onFavorite: () => void; onShoppingList: () => void }) {
   const [servings, setServings] = useState(recipe.servings); const [checked, setChecked] = useState<number[]>([]);
   const scale = servings / recipe.servings;
   return <View style={styles.detailScreen}><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
@@ -253,7 +295,7 @@ function RecipeDetail({ recipe, onBack, onFavorite }: { recipe: Recipe; onBack: 
       <View style={styles.divider} />
       <View style={styles.ingredientHeader}><View><Text style={styles.detailSectionTitle}>Ingredients</Text><Text style={styles.estimated}>{recipe.ingredients.length} ingredients · {recipe.missing.length ? `${recipe.missing.length} missing` : 'all in pantry'}</Text></View><View style={styles.servings}><Pressable onPress={() => setServings(Math.max(1, servings - 1))}><Feather name="minus" size={16} color={colors.green} /></Pressable><Text style={styles.servingsText}>{servings} servings</Text><Pressable onPress={() => setServings(servings + 1)}><Feather name="plus" size={16} color={colors.green} /></Pressable></View></View>
       <View style={styles.ingredientList}>{recipe.ingredients.map((item, index) => <Pressable key={item.name} style={styles.ingredientRow} onPress={() => setChecked(checked.includes(index) ? checked.filter(i => i !== index) : [...checked, index])}><View style={[styles.check, checked.includes(index) && styles.checkActive]}>{checked.includes(index) ? <Feather name="check" size={13} color={colors.onPrimary} /> : null}</View><Text style={[styles.ingredientName, checked.includes(index) && styles.strike]}>{item.name}</Text><Text style={styles.ingredientQty}>{scale === 1 ? item.quantity : `${scale.toFixed(1)}× ${item.quantity}`}</Text>{item.owned ? <View style={styles.ownedDot} /> : <View style={styles.missingDot} />}</Pressable>)}</View>
-      {recipe.missing.length ? <Pressable style={styles.shoppingButton}><Feather name="shopping-bag" size={18} color={colors.green} /><Text style={styles.shoppingText}>Add {recipe.missing.join(', ')} to shopping list</Text></Pressable> : null}
+      {recipe.missing.length ? <Pressable style={styles.shoppingButton} onPress={onShoppingList}><Feather name="shopping-bag" size={18} color={colors.green} /><Text style={styles.shoppingText}>Add {recipe.missing.join(', ')} to shopping list</Text></Pressable> : null}
       <View style={styles.divider} /><Text style={styles.detailSectionTitle}>Let's cook</Text><View style={styles.steps}>{recipe.instructions.map((step, index) => <View style={styles.step} key={step}><View style={styles.stepNumber}><Text style={styles.stepNumberText}>{index + 1}</Text></View><Text style={styles.stepText}>{step}</Text></View>)}</View>
       {recipe.note ? <View style={styles.note}><Feather name="edit-3" size={19} color={colors.green} /><View style={{ flex: 1 }}><Text style={styles.noteLabel}>MY NOTE</Text><Text style={styles.noteText}>{recipe.note}</Text></View></View> : null}
       <View style={styles.tags}>{recipe.tags.map(tag => <View key={tag} style={styles.tag}><Text style={styles.tagText}># {tag}</Text></View>)}</View>
@@ -261,18 +303,38 @@ function RecipeDetail({ recipe, onBack, onFavorite }: { recipe: Recipe; onBack: 
   </ScrollView></View>;
 }
 
-function AddPantryModal({ visible, onClose, onSave }: { visible: boolean; onClose: () => void; onSave: (item: PantryItem) => void }) {
-  const [name, setName] = useState(''); const [quantity, setQuantity] = useState('');
-  const save = () => { if (!name.trim()) return; onSave({ id: `${Date.now()}`, name: name.trim(), quantity: quantity || '1 item', category: 'Other', icon: '🥕' }); setName(''); setQuantity(''); };
-  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={styles.modalBackdrop} onPress={onClose} /><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalPosition}><View style={styles.modalCard}><View style={styles.modalHandle} /><View style={styles.modalHeader}><View><Text style={styles.modalTitle}>Add to pantry</Text><Text style={styles.modalSubtitle}>What did you bring home?</Text></View><Pressable style={styles.iconButton} onPress={onClose}><Feather name="x" size={20} color={colors.ink} /></Pressable></View><Text style={styles.inputLabel}>INGREDIENT</Text><TextInput value={name} onChangeText={setName} autoFocus placeholder="e.g. Cherry tomatoes" placeholderTextColor="#A2AAA5" style={styles.modalInput} /><Text style={styles.inputLabel}>QUANTITY</Text><TextInput value={quantity} onChangeText={setQuantity} placeholder="e.g. 500 g" placeholderTextColor="#A2AAA5" style={styles.modalInput} /><Pressable style={styles.primaryButton} onPress={save}><Feather name="plus" size={18} color={colors.lime} /><Text style={styles.primaryButtonText}>Add ingredient</Text></Pressable></View></KeyboardAvoidingView></Modal>;
+function AddPantryModal({ visible, onClose, onSave }: { visible: boolean; onClose: () => void; onSave: (item: PantryItem) => Promise<boolean> }) {
+  const [name, setName] = useState(''); const [quantity, setQuantity] = useState(''); const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    const saved = await onSave({ id: '', name: name.trim(), quantity: quantity || '1 item', category: 'Pantry', icon: '🥕' });
+    setSaving(false);
+    if (saved) { setName(''); setQuantity(''); }
+  };
+  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><Pressable style={styles.modalBackdrop} onPress={onClose} /><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalPosition}><View style={styles.modalCard}><View style={styles.modalHandle} /><View style={styles.modalHeader}><View><Text style={styles.modalTitle}>Add to pantry</Text><Text style={styles.modalSubtitle}>What did you bring home?</Text></View><Pressable style={styles.iconButton} onPress={onClose}><Feather name="x" size={20} color={colors.ink} /></Pressable></View><Text style={styles.inputLabel}>INGREDIENT</Text><TextInput value={name} onChangeText={setName} autoFocus placeholder="e.g. Cherry tomatoes" placeholderTextColor="#A2AAA5" style={styles.modalInput} /><Text style={styles.inputLabel}>QUANTITY</Text><TextInput value={quantity} onChangeText={setQuantity} placeholder="e.g. 500 g" placeholderTextColor="#A2AAA5" style={styles.modalInput} /><Pressable style={[styles.primaryButton, saving && { opacity: 0.75 }]} onPress={save} disabled={saving}>{saving ? <ActivityIndicator color={colors.lime} /> : <><Feather name="plus" size={18} color={colors.lime} /><Text style={styles.primaryButtonText}>Add ingredient</Text></>}</Pressable></View></KeyboardAvoidingView></Modal>;
 }
 
 export default function App() {
-  const [tab, setTab] = useState<TabName>('Home'); const [recipeList, setRecipeList] = useState(recipeSeed); const [pantry, setPantry] = useState(pantrySeed); const [detail, setDetail] = useState<Recipe | null>(null); const [addPantry, setAddPantry] = useState(false); const [darkMode, setDarkMode] = useState(false); const [session, setSession] = useState<AuthSession | null>(null); const [restoringSession, setRestoringSession] = useState(true);
+  const [tab, setTab] = useState<TabName>('Home'); const [recipeList, setRecipeList] = useState<Recipe[]>([]); const [pantry, setPantry] = useState<PantryItem[]>([]); const [detail, setDetail] = useState<Recipe | null>(null); const [addPantry, setAddPantry] = useState(false); const [darkMode, setDarkMode] = useState(false); const [notificationsEnabled, setNotificationsEnabled] = useState(true); const [session, setSession] = useState<AuthSession | null>(null); const [restoringSession, setRestoringSession] = useState(true); const [loadingData, setLoadingData] = useState(false); const [authIntent, setAuthIntent] = useState<AuthIntent | null>(null);
   applyTheme(darkMode);
   styles = createStyles();
-  const favorite = (id: string) => { setRecipeList(list => list.map(r => r.id === id ? { ...r, favorite: !r.favorite } : r)); setDetail(current => current?.id === id ? { ...current, favorite: !current.favorite } : current); };
-  const selectTab = (next: TabName) => { setDetail(null); setTab(next); };
+  const favorite = async (id: string) => {
+    const current = detail?.id === id ? detail : recipeList.find((recipe) => recipe.id === id);
+    if (!current) return;
+    const nextFavorite = !current.favorite;
+    const applyFavorite = (favoriteValue: boolean) => {
+      setRecipeList(list => list.map(recipe => recipe.id === id ? { ...recipe, favorite: favoriteValue } : recipe));
+      setDetail(selected => selected?.id === id ? { ...selected, favorite: favoriteValue } : selected);
+    };
+    applyFavorite(nextFavorite);
+    try { await updateRecipeFavorite(id, nextFavorite); }
+    catch (error) { applyFavorite(current.favorite); Alert.alert('Could not update favorite', (error as Error).message); }
+  };
+  const selectTab = (next: TabName) => {
+    if (!session && protectedTabs.has(next)) { setAuthIntent({ kind: 'tab', tab: next }); return; }
+    setDetail(null); setTab(next);
+  };
   const imported = (recipe: Recipe) => { setRecipeList(list => [recipe, ...list]); setDetail(recipe); };
   useEffect(() => {
     if (!detail || Platform.OS !== 'android') return;
@@ -302,23 +364,93 @@ export default function App() {
     void restore();
     return () => { active = false; };
   }, []);
-  const authenticated = (nextSession: AuthSession) => { setAccessToken(nextSession.token); setSession(nextSession); void storeSession(nextSession); };
+  useEffect(() => {
+    if (!session) { setRecipeList([]); setPantry([]); setDarkMode(false); setNotificationsEnabled(true); return; }
+    let active = true;
+    setLoadingData(true);
+    Promise.all([listRecipes(), listPantry(), listRecommendations(), getPreferences()])
+      .then(([recipes, pantryItems, recommendations, preferences]) => {
+        if (!active) return;
+        setRecipeList(mergeRecommendations(recipes, recommendations));
+        setPantry(pantryItems);
+        setDarkMode(preferences.darkMode);
+        setNotificationsEnabled(preferences.notificationsEnabled);
+      })
+      .catch((error) => { if (active) Alert.alert('Could not load your kitchen', (error as Error).message); })
+      .finally(() => { if (active) setLoadingData(false); });
+    return () => { active = false; };
+  }, [session?.user.id]);
+  const authenticated = (nextSession: AuthSession) => {
+    const intent = authIntent;
+    setAccessToken(nextSession.token); setSession(nextSession); setAuthIntent(null); void storeSession(nextSession);
+    if (intent?.kind === 'tab') { setDetail(null); setTab(intent.tab); }
+    if (intent?.kind === 'favorite') void favorite(intent.recipeId);
+    if (intent?.kind === 'pantry') setAddPantry(true);
+    if (intent?.kind === 'shopping') {
+      const recipe = detail?.id === intent.recipeId ? detail : recipeList.find(item => item.id === intent.recipeId);
+      if (recipe) void addRecipeToShoppingList(recipe);
+    }
+  };
+  const favoriteWithAuth = (id: string) => session ? void favorite(id) : setAuthIntent({ kind: 'favorite', recipeId: id });
+  const addPantryWithAuth = () => session ? setAddPantry(true) : setAuthIntent({ kind: 'pantry' });
+  const addRecipeToShoppingList = async (recipe: Recipe) => {
+    const missing = [...new Set(recipe.missing)];
+    try {
+      await Promise.all(missing.map((name) => {
+        const ingredient = recipe.ingredients.find(item => item.name.toLowerCase() === name.toLowerCase());
+        return addShoppingListItem(name, ingredient?.quantity);
+      }));
+      Alert.alert('Added to shopping list', `${missing.length} ${missing.length === 1 ? 'ingredient is' : 'ingredients are'} ready for your next grocery run.`);
+    } catch (error) {
+      Alert.alert('Could not finish shopping list', (error as Error).message);
+    }
+  };
+  const shoppingWithAuth = (recipe: Recipe) => session
+    ? void addRecipeToShoppingList(recipe)
+    : setAuthIntent({ kind: 'shopping', recipeId: recipe.id });
+  const changeDarkMode = async (value: boolean) => {
+    const previous = darkMode;
+    setDarkMode(value);
+    try { setDarkMode((await updatePreferences({ darkMode: value })).darkMode); }
+    catch (error) { setDarkMode(previous); Alert.alert('Could not save dark mode', (error as Error).message); }
+  };
+  const changeNotifications = async (value: boolean) => {
+    const previous = notificationsEnabled;
+    setNotificationsEnabled(value);
+    try { setNotificationsEnabled((await updatePreferences({ notificationsEnabled: value })).notificationsEnabled); }
+    catch (error) { setNotificationsEnabled(previous); Alert.alert('Could not save notifications', (error as Error).message); }
+  };
   const logout = async () => {
     try { await logoutSession(); } catch { /* Clear the local session even when the network is unavailable. */ }
     await clearStoredSession(); setAccessToken(null); setSession(null); setTab('Home'); setDetail(null);
   };
-  if (restoringSession) return <SafeAreaProvider><View style={styles.authLoading}><ActivityIndicator color={colors.green} /></View></SafeAreaProvider>;
-  if (!session) return <SafeAreaProvider><StatusBar style={darkMode ? 'light' : 'dark'} /><AuthScreen onAuthenticated={authenticated} /></SafeAreaProvider>;
+  const savePantryItem = async (item: PantryItem): Promise<boolean> => {
+    try {
+      const created = await createPantryItem(item);
+      setPantry(items => [created, ...items]);
+      setAddPantry(false);
+      try {
+        const recommendations = await listRecommendations();
+        setRecipeList(recipes => mergeRecommendations(recipes, recommendations));
+      } catch { /* The saved pantry item remains valid if recommendation refresh is unavailable. */ }
+      return true;
+    } catch (error) {
+      Alert.alert('Could not add ingredient', (error as Error).message);
+      return false;
+    }
+  };
+  if (restoringSession || loadingData) return <SafeAreaProvider><View style={styles.authLoading}><ActivityIndicator color={colors.green} /></View></SafeAreaProvider>;
+  if (authIntent) return <SafeAreaProvider><StatusBar style={darkMode ? 'light' : 'dark'} /><AuthScreen onAuthenticated={authenticated} onCancel={() => setAuthIntent(null)} /></SafeAreaProvider>;
   return <SafeAreaProvider><StatusBar style={detail || darkMode ? 'light' : 'dark'} />
-    {detail ? <RecipeDetail recipe={detail} onBack={() => setDetail(null)} onFavorite={() => favorite(detail.id)} /> : <SafeAreaView style={styles.app} edges={['top']}>
-      {tab === 'Home' && <HomeScreen recipes={recipeList} onOpen={setDetail} onTab={selectTab} onFavorite={favorite} />}
-      {tab === 'Cookbook' && <CookbookScreen recipes={recipeList} onOpen={setDetail} onFavorite={favorite} />}
+    {detail ? <RecipeDetail recipe={detail} onBack={() => setDetail(null)} onFavorite={() => favoriteWithAuth(detail.id)} onShoppingList={() => shoppingWithAuth(detail)} /> : <SafeAreaView style={styles.app} edges={['top']}>
+      {tab === 'Home' && <HomeScreen recipes={recipeList} viewerName={session?.user.name?.trim() || 'Guest'} onOpen={setDetail} onTab={selectTab} onFavorite={favoriteWithAuth} />}
+      {tab === 'Cookbook' && <CookbookScreen recipes={recipeList} onOpen={setDetail} onFavorite={favoriteWithAuth} />}
       {tab === 'Import' && <ImportScreen onComplete={imported} />}
-      {tab === 'Pantry' && <PantryScreen pantry={pantry} onAdd={() => setAddPantry(true)} />}
-      {tab === 'Profile' && <ProfileScreen recipes={recipeList} pantryCount={pantry.length} darkMode={darkMode} session={session} onDarkModeChange={setDarkMode} onLogout={logout} />}
+      {tab === 'Pantry' && <PantryScreen pantry={pantry} onAdd={addPantryWithAuth} />}
+      {tab === 'Profile' && session && <ProfileScreen recipes={recipeList} pantryCount={pantry.length} darkMode={darkMode} notificationsEnabled={notificationsEnabled} session={session} onDarkModeChange={(value) => void changeDarkMode(value)} onNotificationsChange={(value) => void changeNotifications(value)} onLogout={logout} />}
       <BottomNav active={tab} onChange={selectTab} />
     </SafeAreaView>}
-    <AddPantryModal visible={addPantry} onClose={() => setAddPantry(false)} onSave={(item) => { setPantry(items => [item, ...items]); setAddPantry(false); }} />
+    <AddPantryModal visible={addPantry} onClose={() => setAddPantry(false)} onSave={savePantryItem} />
   </SafeAreaProvider>;
 }
 
@@ -337,5 +469,5 @@ function createStyles() { return StyleSheet.create({
   comingSoon: { color: colors.green, backgroundColor: colors.greenSoft, fontSize: 8, fontWeight: '900', letterSpacing: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10 },
   detailHero: { height: 480, justifyContent: 'space-between' }, detailTop: { paddingHorizontal: 18, paddingTop: 5, flexDirection: 'row', justifyContent: 'space-between' }, detailActions: { flexDirection: 'row', gap: 9 }, detailIcon: { width: 42, height: 42, borderRadius: 15, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }, detailCopy: { paddingHorizontal: 22, paddingBottom: 30 }, sourceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }, sourceText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' }, detailTitle: { color: colors.onPrimary, fontSize: 34, lineHeight: 38, fontWeight: '900', letterSpacing: -1 }, detailDesc: { color: '#E1E7E3', fontSize: 13, lineHeight: 19, marginTop: 8, maxWidth: 360 }, detailBody: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -22, paddingHorizontal: 20, paddingTop: 22 }, originalVideo: { backgroundColor: colors.greenSoft, borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11 }, playButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, originalLabel: { color: colors.green, fontSize: 8, letterSpacing: 1.2, fontWeight: '900' }, originalCreator: { color: colors.ink, fontSize: 12, fontWeight: '700', marginTop: 3 }, quickStats: { flexDirection: 'row', paddingVertical: 24, justifyContent: 'space-around' }, quickStat: { alignItems: 'center', flex: 1, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.line }, quickStatValue: { color: colors.ink, fontSize: 16, fontWeight: '900' }, quickStatLabel: { color: colors.muted, fontSize: 8, letterSpacing: 1.1, fontWeight: '800', marginTop: 3 }, nutritionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, detailSectionTitle: { color: colors.ink, fontSize: 23, fontWeight: '900', letterSpacing: -0.4 }, estimated: { color: colors.muted, fontSize: 10, marginTop: 3 }, nutritionRow: { paddingVertical: 15, gap: 9 }, nutritionCard: { minWidth: 88, padding: 14, borderRadius: 17, backgroundColor: colors.background }, nutritionValue: { color: colors.ink, fontSize: 17, fontWeight: '900' }, nutritionLabel: { color: colors.muted, fontSize: 8, letterSpacing: 0.8, fontWeight: '800', marginTop: 4 }, divider: { height: 1, backgroundColor: colors.line, marginVertical: 24 }, ingredientHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, servings: { backgroundColor: colors.greenSoft, borderRadius: 15, paddingHorizontal: 11, height: 37, flexDirection: 'row', alignItems: 'center', gap: 8 }, servingsText: { color: colors.green, fontWeight: '800', fontSize: 10 }, ingredientList: { marginTop: 16 }, ingredientRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, gap: 10 }, check: { width: 21, height: 21, borderRadius: 7, borderWidth: 1.5, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' }, checkActive: { backgroundColor: colors.primary, borderColor: colors.primary }, ingredientName: { flex: 1, color: colors.ink, fontSize: 13, fontWeight: '600' }, strike: { textDecorationLine: 'line-through', color: colors.muted }, ingredientQty: { color: colors.muted, fontSize: 11 }, ownedDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.green }, missingDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.orange }, shoppingButton: { minHeight: 48, paddingHorizontal: 12, backgroundColor: colors.orangeSoft, borderRadius: 15, marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, shoppingText: { color: colors.orangeInk, fontSize: 11, fontWeight: '800' }, steps: { marginTop: 18 }, step: { flexDirection: 'row', gap: 14, marginBottom: 23 }, stepNumber: { width: 34, height: 34, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, stepNumberText: { color: colors.lime, fontWeight: '900' }, stepText: { color: colors.ink, fontSize: 13, lineHeight: 20, flex: 1, paddingTop: 5 }, note: { padding: 17, backgroundColor: colors.greenSoft, borderRadius: 18, flexDirection: 'row', gap: 11, marginTop: 4 }, noteLabel: { color: colors.green, fontSize: 8, letterSpacing: 1, fontWeight: '900' }, noteText: { color: colors.ink, fontSize: 12, lineHeight: 17, marginTop: 4 }, tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 22 }, tag: { paddingHorizontal: 11, height: 30, borderRadius: 15, backgroundColor: colors.background, justifyContent: 'center' }, tagText: { color: colors.muted, fontSize: 10, fontWeight: '700' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,25,20,0.48)' }, modalPosition: { flex: 1, justifyContent: 'flex-end' }, modalCard: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 22, paddingBottom: 34 }, modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 18 }, modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }, modalTitle: { color: colors.ink, fontSize: 24, fontWeight: '900' }, modalSubtitle: { color: colors.muted, fontSize: 12, marginTop: 3 }, modalInput: { height: 53, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.background, paddingHorizontal: 14, color: colors.ink, marginBottom: 14 },
-  notificationPosition: { flex: 1, justifyContent: 'flex-end' }, notificationSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: 32 }, notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }, notificationItem: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, paddingVertical: 12 }, notificationIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' }, notificationTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' }, notificationBody: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 }, notificationTime: { alignSelf: 'flex-start', color: colors.muted, fontSize: 9, fontWeight: '700', marginTop: 5 }, notificationAction: { height: 48, borderRadius: 15, backgroundColor: colors.greenSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 18 }, notificationActionText: { color: colors.green, fontSize: 12, fontWeight: '800' },
+  notificationPosition: { flex: 1, justifyContent: 'flex-end' }, notificationSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: 32 }, notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }, notificationState: { minHeight: 112, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 24 }, notificationStateText: { color: colors.muted, fontSize: 12, lineHeight: 18, textAlign: 'center' }, notificationItem: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, paddingVertical: 12 }, notificationIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' }, notificationTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' }, notificationBody: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 }, notificationTime: { alignSelf: 'flex-start', color: colors.muted, fontSize: 9, fontWeight: '700', marginTop: 5 }, notificationAction: { height: 48, borderRadius: 15, backgroundColor: colors.greenSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 18 }, notificationActionText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 }); }

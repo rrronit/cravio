@@ -18,18 +18,20 @@ type AuthStep = 'email' | 'otp';
 
 type AuthScreenProps = {
   onAuthenticated: (session: AuthSession) => void;
+  onCancel?: () => void;
 };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const isEmail = (value: string) => /^\S+@\S+\.\S+$/.test(normalizeEmail(value));
 
-export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
+export function AuthScreen({ onAuthenticated, onCancel }: AuthScreenProps) {
   const [step, setStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [resendIn, setResendIn] = useState(0);
+  const [devCode, setDevCode] = useState<string | null>(null);
   const styles = createStyles();
 
   useEffect(() => {
@@ -48,7 +50,8 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     try {
       const result = await requestEmailOtp(normalizeEmail(email));
       setStep('otp');
-      setCode('');
+      setDevCode(result.devCode ?? null);
+      setCode(result.devCode ?? '');
       const resendSeconds = Number.isFinite(result.expiresIn) ? result.expiresIn : 60;
       setResendIn(Math.min(Math.max(resendSeconds, 30), 60));
     } catch (requestError) {
@@ -78,6 +81,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const editEmail = () => {
     setStep('email');
     setCode('');
+    setDevCode(null);
     setError('');
     setResendIn(0);
   };
@@ -93,6 +97,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             </View>
             <Text style={styles.brandWord}>cravio</Text>
           </View>
+          {onCancel ? <Pressable style={styles.closeButton} onPress={onCancel} accessibilityRole="button" accessibilityLabel="Close sign in"><Feather name="x" size={20} color={colors.ink} /></Pressable> : null}
 
           <View style={styles.heroIcon}>
             <Ionicons name={step === 'email' ? 'mail-outline' : 'key-outline'} size={30} color={colors.green} />
@@ -149,6 +154,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
                   returnKeyType="done"
                   style={[styles.codeInput, error ? styles.inputError : null]}
                 />
+                {devCode ? <View style={styles.devCode}><Feather name="tool" size={15} color={colors.orangeInk} /><Text style={styles.devCodeText}>Local development code: <Text style={styles.devCodeValue}>{devCode}</Text></Text></View> : null}
                 <Pressable style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]} onPress={verifyCode} disabled={busy}>
                   {busy ? <ActivityIndicator color={colors.lime} /> : <><Text style={styles.buttonText}>Verify & continue</Text><Feather name="check" size={18} color={colors.onPrimary} /></>}
                 </Pressable>
@@ -176,6 +182,7 @@ const createStyles = () => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1, width: '100%', maxWidth: 560, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 24 },
   brand: { position: 'absolute', top: 16, left: 24, height: 42, flexDirection: 'row', alignItems: 'center' },
+  closeButton: { position: 'absolute', top: 16, right: 24, width: 42, height: 42, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   brandMark: { width: 34, height: 38, justifyContent: 'center' },
   brandC: { color: colors.ink, fontSize: 33, lineHeight: 38, fontWeight: '900', letterSpacing: -2 },
   brandRibbon: { position: 'absolute', width: 8, height: 16, left: 12, bottom: 3, borderRadius: 2, backgroundColor: colors.lime, overflow: 'hidden' },
@@ -200,6 +207,9 @@ const createStyles = () => StyleSheet.create({
   resendDisabled: { color: colors.muted },
   errorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, marginTop: 13 },
   errorText: { flex: 1, color: colors.red, fontSize: 11, lineHeight: 16 },
+  devCode: { minHeight: 38, borderRadius: 12, backgroundColor: colors.orangeSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 10, paddingHorizontal: 12 },
+  devCodeText: { color: colors.orangeInk, fontSize: 11, fontWeight: '700' },
+  devCodeValue: { fontWeight: '900', letterSpacing: 1.5 },
   securityNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 18 },
   securityText: { color: colors.muted, fontSize: 10 },
 });
