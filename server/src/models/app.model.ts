@@ -2,10 +2,16 @@ import type { Context } from 'hono';
 
 export type Bindings = {
   DB: D1Database;
+  EMAIL: SendEmail;
+  AUTH_SECRET: string;
+  EMAIL_FROM: string;
 };
 
 export type AppEnv = {
   Bindings: Bindings;
+  Variables: {
+    userId: string;
+  };
 };
 
 export type AppContext = Context<AppEnv>;
