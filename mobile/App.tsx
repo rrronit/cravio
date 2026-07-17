@@ -18,19 +18,52 @@ import { PantryItem, Recipe, TabName } from './src/types';
 const contentWidth = { width: '100%' as const, maxWidth: 720, alignSelf: 'center' as const };
 
 function BrandHeader({ title, subtitle, back, onBack }: { title?: string; subtitle?: string; back?: boolean; onBack?: () => void }) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [hasUnread, setHasUnread] = useState(true);
+  const openNotifications = () => { setNotificationsOpen(true); setHasUnread(false); };
+  const notifications = [
+    { icon: 'check-circle', title: 'Recipe ready', body: 'Paneer Tikka Bowl was added to your cookbook.', time: '2m' },
+    { icon: 'clock', title: 'Use your spinach soon', body: 'It expires tomorrow. We found 2 recipes for it.', time: '1h' },
+    { icon: 'zap', title: 'You can cook this now', body: 'Miso Butter Noodles matches your pantry 100%.', time: '3h' },
+  ];
   return (
-    <View style={styles.header}>
-      {back ? <Pressable style={styles.iconButton} onPress={onBack}><Feather name="arrow-left" size={21} color={colors.ink} /></Pressable> : (
-        <View style={styles.brandLogoFrame} accessibilityLabel="Cravio">
-          <Image source={require('./assets/cravio-logo.png')} style={styles.brandLogo} resizeMode="cover" />
+    <>
+      <View style={styles.header}>
+        {back ? <Pressable style={styles.iconButton} onPress={onBack}><Feather name="arrow-left" size={21} color={colors.ink} /></Pressable> : (
+          <View style={styles.brandLogoFrame} accessibilityLabel="Cravio">
+            <Image source={require('./assets/cravio-logo.png')} style={styles.brandLogo} resizeMode="cover" />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          {title ? <Text style={styles.headerTitle}>{title}</Text> : null}
+          {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
         </View>
-      )}
-      <View style={{ flex: 1 }}>
-        {title ? <Text style={styles.headerTitle}>{title}</Text> : null}
-        {subtitle ? <Text style={styles.headerSubtitle}>{subtitle}</Text> : null}
+        <Pressable style={styles.iconButton} onPress={openNotifications} accessibilityRole="button" accessibilityLabel="Open notifications">
+          <Feather name="bell" size={20} color={colors.ink} />
+          {hasUnread ? <View style={styles.notifyDot} /> : null}
+        </Pressable>
       </View>
-      <Pressable style={styles.iconButton}><Feather name="bell" size={20} color={colors.ink} /><View style={styles.notifyDot} /></Pressable>
-    </View>
+      <Modal visible={notificationsOpen} transparent animationType="slide" onRequestClose={() => setNotificationsOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setNotificationsOpen(false)} />
+        <View style={styles.notificationPosition}>
+          <View style={styles.notificationSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.notificationHeader}>
+              <View><Text style={styles.modalTitle}>Notifications</Text><Text style={styles.modalSubtitle}>Fresh from your kitchen</Text></View>
+              <Pressable style={styles.iconButton} onPress={() => setNotificationsOpen(false)} accessibilityRole="button" accessibilityLabel="Close notifications"><Feather name="x" size={20} color={colors.ink} /></Pressable>
+            </View>
+            {notifications.map((item, index) => (
+              <Pressable key={item.title} style={styles.notificationItem} onPress={() => setNotificationsOpen(false)}>
+                <View style={[styles.notificationIcon, index === 1 && { backgroundColor: colors.orangeSoft }]}><Feather name={item.icon as any} size={20} color={index === 1 ? '#A85F25' : colors.green} /></View>
+                <View style={{ flex: 1 }}><Text style={styles.notificationTitle}>{item.title}</Text><Text style={styles.notificationBody}>{item.body}</Text></View>
+                <Text style={styles.notificationTime}>{item.time}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={styles.notificationAction} onPress={() => setNotificationsOpen(false)}><Text style={styles.notificationActionText}>You're all caught up</Text><Feather name="check" size={16} color={colors.green} /></Pressable>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -232,4 +265,5 @@ const styles = StyleSheet.create({
   comingSoon: { color: colors.green, backgroundColor: colors.greenSoft, fontSize: 8, fontWeight: '900', letterSpacing: 1, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10 },
   detailHero: { height: 480, justifyContent: 'space-between' }, detailTop: { paddingHorizontal: 18, paddingTop: 5, flexDirection: 'row', justifyContent: 'space-between' }, detailActions: { flexDirection: 'row', gap: 9 }, detailIcon: { width: 42, height: 42, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.93)', alignItems: 'center', justifyContent: 'center' }, detailCopy: { paddingHorizontal: 22, paddingBottom: 30 }, sourceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }, sourceText: { color: colors.surface, fontSize: 11, fontWeight: '700' }, detailTitle: { color: colors.surface, fontSize: 34, lineHeight: 38, fontWeight: '900', letterSpacing: -1 }, detailDesc: { color: '#E1E7E3', fontSize: 13, lineHeight: 19, marginTop: 8, maxWidth: 360 }, detailBody: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -22, paddingHorizontal: 20, paddingTop: 22 }, originalVideo: { backgroundColor: colors.greenSoft, borderRadius: 17, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11 }, playButton: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }, originalLabel: { color: colors.green, fontSize: 8, letterSpacing: 1.2, fontWeight: '900' }, originalCreator: { color: colors.ink, fontSize: 12, fontWeight: '700', marginTop: 3 }, quickStats: { flexDirection: 'row', paddingVertical: 24, justifyContent: 'space-around' }, quickStat: { alignItems: 'center', flex: 1, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.line }, quickStatValue: { color: colors.ink, fontSize: 16, fontWeight: '900' }, quickStatLabel: { color: colors.muted, fontSize: 8, letterSpacing: 1.1, fontWeight: '800', marginTop: 3 }, nutritionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, detailSectionTitle: { color: colors.ink, fontSize: 23, fontWeight: '900', letterSpacing: -0.4 }, estimated: { color: colors.muted, fontSize: 10, marginTop: 3 }, nutritionRow: { paddingVertical: 15, gap: 9 }, nutritionCard: { minWidth: 88, padding: 14, borderRadius: 17, backgroundColor: colors.background }, nutritionValue: { color: colors.ink, fontSize: 17, fontWeight: '900' }, nutritionLabel: { color: colors.muted, fontSize: 8, letterSpacing: 0.8, fontWeight: '800', marginTop: 4 }, divider: { height: 1, backgroundColor: colors.line, marginVertical: 24 }, ingredientHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, servings: { backgroundColor: colors.greenSoft, borderRadius: 15, paddingHorizontal: 11, height: 37, flexDirection: 'row', alignItems: 'center', gap: 8 }, servingsText: { color: colors.green, fontWeight: '800', fontSize: 10 }, ingredientList: { marginTop: 16 }, ingredientRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, gap: 10 }, check: { width: 21, height: 21, borderRadius: 7, borderWidth: 1.5, borderColor: '#C5CAC7', alignItems: 'center', justifyContent: 'center' }, checkActive: { backgroundColor: colors.green, borderColor: colors.green }, ingredientName: { flex: 1, color: colors.ink, fontSize: 13, fontWeight: '600' }, strike: { textDecorationLine: 'line-through', color: colors.muted }, ingredientQty: { color: colors.muted, fontSize: 11 }, ownedDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.green }, missingDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.orange }, shoppingButton: { minHeight: 48, paddingHorizontal: 12, backgroundColor: colors.orangeSoft, borderRadius: 15, marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, shoppingText: { color: colors.green, fontSize: 11, fontWeight: '800' }, steps: { marginTop: 18 }, step: { flexDirection: 'row', gap: 14, marginBottom: 23 }, stepNumber: { width: 34, height: 34, borderRadius: 12, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' }, stepNumberText: { color: colors.lime, fontWeight: '900' }, stepText: { color: colors.ink, fontSize: 13, lineHeight: 20, flex: 1, paddingTop: 5 }, note: { padding: 17, backgroundColor: colors.greenSoft, borderRadius: 18, flexDirection: 'row', gap: 11, marginTop: 4 }, noteLabel: { color: colors.green, fontSize: 8, letterSpacing: 1, fontWeight: '900' }, noteText: { color: colors.ink, fontSize: 12, lineHeight: 17, marginTop: 4 }, tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 22 }, tag: { paddingHorizontal: 11, height: 30, borderRadius: 15, backgroundColor: colors.background, justifyContent: 'center' }, tagText: { color: colors.muted, fontSize: 10, fontWeight: '700' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(14,25,20,0.48)' }, modalPosition: { flex: 1, justifyContent: 'flex-end' }, modalCard: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 22, paddingBottom: 34 }, modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.line, alignSelf: 'center', marginBottom: 18 }, modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }, modalTitle: { color: colors.ink, fontSize: 24, fontWeight: '900' }, modalSubtitle: { color: colors.muted, fontSize: 12, marginTop: 3 }, modalInput: { height: 53, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.background, paddingHorizontal: 14, color: colors.ink, marginBottom: 14 },
+  notificationPosition: { flex: 1, justifyContent: 'flex-end' }, notificationSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: 32 }, notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }, notificationItem: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line, paddingVertical: 12 }, notificationIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' }, notificationTitle: { color: colors.ink, fontSize: 13, fontWeight: '800' }, notificationBody: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 }, notificationTime: { alignSelf: 'flex-start', color: colors.muted, fontSize: 9, fontWeight: '700', marginTop: 5 }, notificationAction: { height: 48, borderRadius: 15, backgroundColor: colors.greenSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 18 }, notificationActionText: { color: colors.green, fontSize: 12, fontWeight: '800' },
 });
