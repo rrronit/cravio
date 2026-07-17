@@ -19,6 +19,12 @@ The mobile app is an Expo project. Open it in Expo Go, an iOS simulator, an Andr
 
 The API is a Hono app targeting Cloudflare Workers. Wrangler serves it locally at `http://localhost:8787`. The app includes local seed data, so every screen remains usable when the API is offline.
 
+The mobile import screen talks to that API. iOS Simulator and Android Emulator use the local Worker automatically. For Expo Go on a physical device or a deployed Worker, set the public API URL before starting Expo:
+
+```bash
+EXPO_PUBLIC_API_URL=https://cravio-api.<your-subdomain>.workers.dev npm run mobile
+```
+
 ## Deploy the API to Cloudflare
 
 Authenticate Wrangler once, then deploy:

@@ -51,7 +51,19 @@ export const pantry: PantryItem[] = [
   { id: 'p13', name: 'Basmati rice', quantity: 1, unit: 'kg', available: true }, { id: 'p14', name: 'Red onion', quantity: 3, unit: 'items', available: true },
 ];
 
-export const importJobs: { id: string; url: string; platform: string; status: string; progress: number; recipeId?: string; createdAt: string }[] = [];
+export type ImportEvent = { status: string; progress: number; at: string; message: string };
+export type ImportJob = {
+  id: string;
+  url: string;
+  platform: string;
+  status: string;
+  progress: number;
+  recipeId?: string;
+  createdAt: string;
+  events: ImportEvent[];
+};
+
+export const importJobs: ImportJob[] = [];
 
 const aliases: Record<string, string> = {
   curd: 'yogurt', 'greek yogurt': 'yogurt', 'bell pepper': 'capsicum', 'bell peppers': 'capsicum',

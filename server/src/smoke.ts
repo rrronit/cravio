@@ -1,4 +1,5 @@
 import app from './index';
+import { importJobs } from './data/store';
 
 const health = await app.request('/health');
 assert(health.status === 200, 'health should return 200');
@@ -20,6 +21,21 @@ const created = await app.request('/pantry', {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Capsicum', quantity: 2, unit: 'items' }),
 });
 assert(created.status === 201, 'pantry create should return 201');
+
+const importResponse = await app.request('/imports', {
+  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url: 'https://instagram.com/reel/smoke' }),
+});
+assert(importResponse.status === 202, 'import should be queued');
+const importJob = (await importResponse.json()) as { id: string };
+const storedJob = importJobs.find((job) => job.id === importJob.id);
+assert(Boolean(storedJob), 'import job should be stored');
+storedJob!.createdAt = new Date(Date.now() - 5000).toISOString();
+await app.request(`/imports/${importJob.id}`);
+await app.request(`/imports/${importJob.id}`);
+const readyResponse = await app.request(`/imports/${importJob.id}`);
+const readyJob = (await readyResponse.json()) as { status: string; events: unknown[] };
+assert(readyJob.status === 'ready', 'import should advance to ready');
+assert(readyJob.events.length === 4, 'import should record every processing step');
 
 console.log('Hono API smoke tests passed');
 

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { z } from 'zod';
-import { importJobs, normalizeIngredient, pantry, recipes, recommendations } from './data/store';
+import { ImportJob, importJobs, normalizeIngredient, pantry, recipes, recommendations } from './data/store';
 
 const app = new Hono();
 
@@ -17,18 +17,24 @@ app.get('/health', (c) => c.json({ ok: true, service: 'cravio-api', timestamp: n
 app.post('/imports', async (c) => {
   const body = await readJson(c.req.raw);
   const input = z.object({ url: z.string().url(), caption: z.string().optional() }).safeParse(body);
-  if (!input.success) return c.json({ error: 'A valid recipe video URL is required.', details: input.error.flatten() }, 400);
+  if (!input.success) {
+    console.warn(JSON.stringify({ event: 'recipe_import_rejected', status: 'failed', message: 'A valid recipe video URL is required.', timestamp: new Date().toISOString() }));
+    return c.json({ error: 'A valid recipe video URL is required.', details: input.error.flatten() }, 400);
+  }
 
   let platform = 'Unknown';
   if (input.data.url.includes('instagram.com')) platform = 'Instagram';
   else if (input.data.url.includes('tiktok.com')) platform = 'TikTok';
   else if (input.data.url.includes('youtube.com') || input.data.url.includes('youtu.be')) platform = 'YouTube';
 
-  const job = {
+  const createdAt = new Date().toISOString();
+  const job: ImportJob = {
     id: `imp_${crypto.randomUUID()}`, url: input.data.url, platform, status: 'queued', progress: 0,
-    createdAt: new Date().toISOString(),
+    createdAt,
+    events: [{ status: 'queued', progress: 0, at: createdAt, message: 'Import accepted and queued.' }],
   };
   importJobs.unshift(job);
+  logImport(job, 'Import accepted and queued.');
   return c.json(job, 202);
 });
 
@@ -37,17 +43,18 @@ app.get('/imports/:id', (c) => {
   if (!job) return c.json({ error: 'Import job not found.' }, 404);
 
   const age = Date.now() - Date.parse(job.createdAt);
-  if (age > 2500 && job.status !== 'ready') {
+  if (job.status === 'queued' && age > 300) {
+    transitionImport(job, 'extracting', 35, `Extracting metadata from ${job.platform}.`);
+  } else if (job.status === 'extracting' && age > 1200) {
+    transitionImport(job, 'generating_recipe', 72, 'Generating ingredients, instructions, nutrition, and tags.');
+  } else if (job.status === 'generating_recipe' && age > 2500) {
     const imported = {
       ...recipes[2], id: crypto.randomUUID(), title: 'Imported Recipe', sourceUrl: job.url, platform: job.platform,
       favorite: false, confidence: 0.72, warnings: ['This demo extraction should be reviewed before cooking.'], importedAt: new Date().toISOString(),
     };
     recipes.unshift(imported);
-    job.status = 'ready'; job.progress = 100; job.recipeId = imported.id;
-  } else if (age > 1200) {
-    job.status = 'generating_recipe'; job.progress = 72;
-  } else if (age > 300) {
-    job.status = 'extracting'; job.progress = 35;
+    job.recipeId = imported.id;
+    transitionImport(job, 'ready', 100, `Recipe generated and saved as ${imported.id}.`);
   }
   return c.json(job);
 });
@@ -146,6 +153,20 @@ app.onError((error, c) => {
 
 async function readJson(request: Request): Promise<unknown> {
   try { return await request.json(); } catch { return undefined; }
+}
+
+function transitionImport(job: ImportJob, status: string, progress: number, message: string) {
+  job.status = status;
+  job.progress = progress;
+  job.events.push({ status, progress, message, at: new Date().toISOString() });
+  logImport(job, message);
+}
+
+function logImport(job: ImportJob, message: string) {
+  console.info(JSON.stringify({
+    event: 'recipe_import', jobId: job.id, platform: job.platform, status: job.status,
+    progress: job.progress, message, timestamp: new Date().toISOString(),
+  }));
 }
 
 export default app;
