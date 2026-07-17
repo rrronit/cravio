@@ -1,8 +1,7 @@
-import { Platform } from 'react-native';
 import { Recipe } from '../types';
 
-const localApi = Platform.OS === 'android' ? 'http://10.0.2.2:8787' : 'http://localhost:8787';
-export const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || localApi;
+const cloudflareApi = 'https://cravio-api.slatex.workers.dev';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || cloudflareApi;
 let accessToken: string | null = null;
 
 export type AuthUser = {
