@@ -15,8 +15,13 @@ import { createUserService } from './user.service';
 import { createPreferenceService } from './preference.service';
 import { createNotificationService } from './notification.service';
 import { createShoppingListService } from './shopping-list.service';
+import type { Bindings } from '../models/app.model';
+import { createSourceExtractor } from './source-extractor.service';
+import { createRecipeGenerator } from './recipe-generator.service';
 
-export const createServices = (db: D1Database) => {
+type ReelBindings = Pick<Bindings, 'BROWSER'>;
+
+export const createServices = (db: D1Database, bindings: ReelBindings = {}) => {
   const recipes = createRecipeRepository(db);
   const pantry = createPantryRepository(db);
   const imports = createImportRepository(db);
@@ -28,7 +33,7 @@ export const createServices = (db: D1Database) => {
     health: createHealthService(db),
     recipes: createRecipeService(recipes),
     pantry: createPantryService(pantry),
-    imports: createImportService(imports, recipes),
+    imports: createImportService(imports, recipes, createSourceExtractor(bindings), createRecipeGenerator(bindings.BROWSER)),
     ingredients: createIngredientService(recipes),
     recommendations: createRecommendationService(recipes, pantry),
     users: createUserService(users),

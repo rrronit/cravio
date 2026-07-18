@@ -12,28 +12,28 @@ export async function createImport(c: AppContext) {
     return c.json({ error: 'A valid recipe video URL is required.', details: input.error.flatten() }, 400);
   }
   logApiStep(c, 'import.create.validation_succeeded', { platform: detectSafePlatform(input.data.url) });
-  const services = createServices(c.env.DB);
+  const services = createServices(c.env.DB, c.env);
   const userId = currentUserId(c);
   logApiStep(c, 'import.create.user_check_started');
   await services.users.get(userId);
   logApiStep(c, 'import.create.job_creation_started');
   const job = await services.imports.create(input.data, userId);
   logApiStep(c, 'import.create.job_created', { jobId: job.id, status: job.status });
+  logApiStep(c, 'import.create.queue_send_started', { jobId: job.id });
+  await c.env.IMPORT_QUEUE.send({ id: job.id, userId });
+  logApiStep(c, 'import.create.queue_send_completed', { jobId: job.id });
   return c.json(job, 202);
 }
 
 export async function getImport(c: AppContext) {
   const jobId = c.req.param('id')!;
   logApiStep(c, 'import.poll.lookup_started', { jobId });
-  const job = await createServices(c.env.DB).imports.getAndAdvance(jobId, currentUserId(c));
-  logApiStep(c, 'import.poll.transition_completed', { jobId, status: job.status, progress: job.progress });
+  const job = await createServices(c.env.DB, c.env).imports.get(jobId, currentUserId(c));
+  logApiStep(c, 'import.poll.lookup_completed', { jobId, status: job.status, progress: job.progress });
   return c.json(job);
 }
 
 const detectSafePlatform = (url: string): string => {
   const hostname = new URL(url).hostname.toLowerCase();
-  if (hostname.includes('instagram')) return 'instagram';
-  if (hostname.includes('tiktok')) return 'tiktok';
-  if (hostname.includes('youtube') || hostname.includes('youtu.be')) return 'youtube';
-  return 'other';
+  return hostname === 'instagram.com' || hostname === 'www.instagram.com' ? 'instagram_reel' : 'unsupported';
 };

@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import type { ApiStepLogger } from '../lib/logger';
+import type { ImportQueueMessage } from './import.model';
 
 export type Bindings = {
   DB: D1Database;
@@ -7,6 +8,8 @@ export type Bindings = {
   AUTH_SECRET: string;
   EMAIL_FROM: string;
   ENVIRONMENT: 'development' | 'production';
+  IMPORT_QUEUE: Queue<ImportQueueMessage>;
+  BROWSER?: BrowserRun;
 };
 
 export type AppEnv = {

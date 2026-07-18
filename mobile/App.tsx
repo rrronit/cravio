@@ -202,7 +202,8 @@ function ImportScreen({ onComplete }: { onComplete: (recipe: Recipe) => void }) 
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
   const startImport = async () => {
-    if (!url.trim()) return Alert.alert('Paste a recipe link', 'Add an Instagram, TikTok, or YouTube link first.');
+    if (!url.trim()) return Alert.alert('Paste a Reel link', 'Add a public Instagram Reel link first.');
+    if (!isInstagramReelUrl(url)) return Alert.alert('Instagram Reels only', 'Use a link like https://www.instagram.com/reel/…');
     controller.current?.abort();
     controller.current = new AbortController();
     setStatus('queued'); setProgress(0); setStatusMessage('Sending your link to Cravio…');
@@ -234,7 +235,7 @@ function ImportScreen({ onComplete }: { onComplete: (recipe: Recipe) => void }) 
   return (
     <KeyboardAvoidingView style={styles.flexScreen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}><View style={styles.page}><BrandHeader />
-        <View style={styles.importPageIcon}><Ionicons name="sparkles" size={28} color={colors.green} /></View><Text style={[styles.screenTitle, { textAlign: 'center' }]}>Reel to recipe,{`\n`}just like that.</Text><Text style={[styles.screenSubtitle, { textAlign: 'center', paddingHorizontal: 28 }]}>Paste a link from Instagram, TikTok, or YouTube. Cravio will do the rest.</Text>
+        <View style={styles.importPageIcon}><Ionicons name="sparkles" size={28} color={colors.green} /></View><Text style={[styles.screenTitle, { textAlign: 'center' }]}>Reel to recipe,{`\n`}just like that.</Text><Text style={[styles.screenSubtitle, { textAlign: 'center', paddingHorizontal: 28 }]}>Paste a public Instagram Reel link. Cravio will do the rest.</Text>
         <View style={styles.urlCard}><Text style={styles.inputLabel}>RECIPE VIDEO LINK</Text><View style={styles.urlInput}><Feather name="link-2" size={20} color={colors.muted} /><TextInput value={url} onChangeText={setUrl} autoCapitalize="none" keyboardType="url" placeholder="https://instagram.com/reel/..." placeholderTextColor="#A2AAA5" style={styles.urlTextInput} /></View>
           <Pressable style={[styles.primaryButton, status !== 'idle' && status !== 'ready' && status !== 'failed' && { opacity: 0.7 }]} onPress={startImport} disabled={!['idle', 'failed'].includes(status)}><Ionicons name="sparkles" size={18} color={colors.lime} /><Text style={[styles.primaryButtonText, { color: colors.onPrimary }]}>{status === 'failed' ? 'Try import again' : 'Create my recipe'}</Text><Feather name="arrow-right" size={18} color={colors.onPrimary} /></Pressable>
         </View>
@@ -246,13 +247,20 @@ function ImportScreen({ onComplete }: { onComplete: (recipe: Recipe) => void }) 
           {status === 'ready' ? <Pressable style={styles.saveButton} onPress={saveImport}><Text style={styles.saveButtonText}>Review & save recipe</Text><Feather name="arrow-right" size={18} color={colors.onLime} /></Pressable> : null}
         </View> : null}
         <View style={styles.howCard}><Text style={styles.howTitle}>How to import</Text>{[['share-2', 'Copy a reel link', 'Tap Share on your favorite cooking video.'], ['link', 'Paste it here', 'Cravio reads the caption and video details.'], ['check-circle', 'Review & cook', 'Edit anything, then save to your cookbook.']].map(([icon, title, desc], index) => <View key={title} style={styles.howRow}><View style={styles.howNumber}><Feather name={icon as any} size={18} color={colors.green} /></View><View style={{ flex: 1 }}><Text style={styles.howRowTitle}>{title}</Text><Text style={styles.howRowText}>{desc}</Text></View>{index < 2 ? <View style={styles.howLine} /> : null}</View>)}</View>
-        <View style={styles.platforms}><Text style={styles.platformLabel}>WORKS WITH</Text><View style={styles.platformRow}><View style={styles.platform}><Ionicons name="logo-instagram" size={24} color={colors.ink} /><Text style={styles.platformText}>Instagram</Text></View><View style={styles.platform}><Ionicons name="logo-tiktok" size={23} color={colors.ink} /><Text style={styles.platformText}>TikTok</Text></View><View style={styles.platform}><Ionicons name="logo-youtube" size={25} color="#D9433C" /><Text style={styles.platformText}>YouTube</Text></View></View></View>
+        <View style={styles.platforms}><Text style={styles.platformLabel}>WORKS WITH</Text><View style={styles.platformRow}><View style={styles.platform}><Ionicons name="logo-instagram" size={24} color={colors.ink} /><Text style={styles.platformText}>Instagram Reels</Text></View></View></View>
       </View></ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const isInstagramReelUrl = (value: string): boolean => {
+  try {
+    const parsed = new URL(value.trim());
+    return parsed.protocol === 'https:' && ['instagram.com', 'www.instagram.com'].includes(parsed.hostname.toLowerCase()) && /^\/reel\/[^/]+\/?$/i.test(parsed.pathname);
+  } catch { return false; }
+};
 
 function PantryScreen({ pantry, onAdd }: { pantry: PantryItem[]; onAdd: () => void }) {
   const [query, setQuery] = useState('');

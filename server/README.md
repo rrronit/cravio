@@ -73,3 +73,11 @@ Wrangler listens on `0.0.0.0:8787` so Expo on another device can reach it. Andro
 When and only when `ENVIRONMENT` is exactly `development`, the request response includes a `devCode` field and Wrangler prints the code to its local console. No email is sent. The deployed configuration explicitly sets `ENVIRONMENT` to `production`, where OTP codes are never returned or logged and delivery still requires the Cloudflare Email Service binding.
 
 Successful production OTP requests return `{ "message": "...", "expiresIn": 600 }`. Successful verification returns `{ "token": "...", "expiresAt": "<ISO timestamp>", "user": { ... } }`. Send that token as `Authorization: Bearer <token>` for every domain API request. The legacy `X-User-Id` identity override is no longer accepted.
+
+## Reel extraction
+
+`POST /imports` accepts a public `https://www.instagram.com/reel/…` URL and an optional copied caption. The Worker stores the job in D1 and sends it to `cravio-imports`; the app polls `GET /imports/:id` until the job is `ready` or `failed`. TikTok, YouTube, Instagram posts, and arbitrary URLs are rejected.
+
+The extractor uses Cloudflare Browser Rendering for public Instagram Reel text and structured recipe extraction. A deterministic caption parser remains available when AI extraction cannot produce valid output.
+
+Apply `0007_real_imports.sql` before running the importer. The importer does not download Reel video files or bypass login and bot protections.

@@ -5,6 +5,10 @@
   "compatibility_date": "2026-07-17",
   "workers_dev": true,
   "preview_urls": true,
+  "browser": {
+    "binding": "BROWSER",
+    "remote": true
+  },
   "send_email": [
     {
       "name": "EMAIL"
@@ -22,6 +26,23 @@
       "migrations_dir": "migrations"
     }
   ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "IMPORT_QUEUE",
+        "queue": "cravio-imports"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "cravio-imports",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "retry_delay": 10
+      }
+    ]
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
