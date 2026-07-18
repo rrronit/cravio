@@ -78,6 +78,6 @@ Successful production OTP requests return `{ "message": "...", "expiresIn": 600 
 
 `POST /imports` accepts a public `https://www.instagram.com/reel/…` URL and an optional copied caption. The Worker stores the job in D1 and sends it to `cravio-imports`; the app polls `GET /imports/:id` until the job is `ready` or `failed`. TikTok, YouTube, Instagram posts, and arbitrary URLs are rejected.
 
-The extractor uses Cloudflare Browser Rendering for public Instagram Reel text and structured recipe extraction. A deterministic caption parser remains available when AI extraction cannot produce valid output.
+The extractor fetches the complete public Instagram Reel HTML, reads its description, creator, and thumbnail meta tags, decodes the caption, and sends that caption to OpenRouter using the official TypeScript SDK. The model is configured through `OPENROUTER_MODEL`.
 
-Apply `0007_real_imports.sql` before running the importer. The importer does not download Reel video files or bypass login and bot protections.
+Apply `0007_real_imports.sql` before running the importer. Store the AI key with `wrangler secret put OPENROUTER_API_KEY`; never commit it. The importer does not download Reel video files or bypass login and bot protections.

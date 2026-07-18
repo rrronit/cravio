@@ -5,10 +5,6 @@
   "compatibility_date": "2026-07-17",
   "workers_dev": true,
   "preview_urls": true,
-  "browser": {
-    "binding": "BROWSER",
-    "remote": true
-  },
   "send_email": [
     {
       "name": "EMAIL"
@@ -16,7 +12,8 @@
   ],
   "vars": {
     "EMAIL_FROM": "auth@cravio.app",
-    "ENVIRONMENT": "production"
+    "ENVIRONMENT": "production",
+    "OPENROUTER_MODEL": "google/gemini-3.1-flash-lite"
   },
   "d1_databases": [
     {

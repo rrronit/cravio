@@ -9,7 +9,8 @@ export type Bindings = {
   EMAIL_FROM: string;
   ENVIRONMENT: 'development' | 'production';
   IMPORT_QUEUE: Queue<ImportQueueMessage>;
-  BROWSER?: BrowserRun;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_MODEL?: string;
 };
 
 export type AppEnv = {

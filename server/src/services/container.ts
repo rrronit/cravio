@@ -19,7 +19,7 @@ import type { Bindings } from '../models/app.model';
 import { createSourceExtractor } from './source-extractor.service';
 import { createRecipeGenerator } from './recipe-generator.service';
 
-type ReelBindings = Pick<Bindings, 'BROWSER'>;
+type ReelBindings = Pick<Bindings, 'OPENROUTER_API_KEY' | 'OPENROUTER_MODEL'>;
 
 export const createServices = (db: D1Database, bindings: ReelBindings = {}) => {
   const recipes = createRecipeRepository(db);
@@ -33,7 +33,12 @@ export const createServices = (db: D1Database, bindings: ReelBindings = {}) => {
     health: createHealthService(db),
     recipes: createRecipeService(recipes),
     pantry: createPantryService(pantry),
-    imports: createImportService(imports, recipes, createSourceExtractor(bindings), createRecipeGenerator(bindings.BROWSER)),
+    imports: createImportService(
+      imports,
+      recipes,
+      createSourceExtractor(),
+      createRecipeGenerator(bindings.OPENROUTER_API_KEY, bindings.OPENROUTER_MODEL),
+    ),
     ingredients: createIngredientService(recipes),
     recommendations: createRecommendationService(recipes, pantry),
     users: createUserService(users),
