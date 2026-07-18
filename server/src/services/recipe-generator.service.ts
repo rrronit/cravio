@@ -45,7 +45,7 @@ const recipeJsonSchema = {
   required: ['title', 'description', 'prepTime', 'cookTime', 'servings', 'cuisine', 'difficulty', 'tags', 'ingredients', 'instructions', 'nutrition'],
 };
 
-export const createRecipeGenerator = (apiKey?: string, model = 'google/gemini-3.1-flash-lite') => ({
+export const createRecipeGenerator = (apiKey?: string, model = 'deepseek/deepseek-v4-flash') => ({
   generate: (job: ImportJob, source: SourceExtraction) => generateRecipe(apiKey, model, job, source),
 });
 
