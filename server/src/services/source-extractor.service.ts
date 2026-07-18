@@ -28,9 +28,8 @@ async function extractInstagramReel(browser: BrowserRun | undefined, value: stri
   const normalized = normalizeInstagramReelUrl(value);
   let source: SourceExtraction;
   try {
-    source = browser
-      ? await extractWithBrowser(browser, normalized.url)
-      : await extractOpenGraph(normalized.url);
+    if (!browser) throw createAppError(503, 'Cloudflare Browser Rendering is not configured.');
+    source = await extractWithBrowser(browser, normalized.url);
   } catch (error) {
     if (!suppliedCaption?.trim()) throw error;
     source = { title: '', creator: '', description: '', thumbnail: '', provider: 'user_caption' };
@@ -72,40 +71,6 @@ async function extractWithBrowser(browser: BrowserRun, url: string): Promise<Sou
     thumbnail: safeImage(payload.result.thumbnail),
     provider: 'cloudflare_browser_json',
   };
-}
-
-async function extractOpenGraph(url: string): Promise<SourceExtraction> {
-  const response = await fetch(url, {
-    headers: { accept: 'text/html' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(12_000),
-  });
-  if (!response.ok) throw createAppError(502, 'Instagram did not expose public Reel metadata. Paste the caption and try again.');
-  const html = await readBoundedText(response, 512_000);
-  return {
-    title: readMeta(html, 'og:title'),
-    creator: '',
-    description: readMeta(html, 'og:description'),
-    thumbnail: safeImage(readMeta(html, 'og:image')),
-    provider: 'instagram_open_graph',
-  };
-}
-
-async function readBoundedText(response: Response, limit: number): Promise<string> {
-  const length = Number(response.headers.get('content-length') || 0);
-  if (length > limit) throw createAppError(502, 'The Instagram page was too large to inspect safely.');
-  const text = await response.text();
-  if (text.length > limit) throw createAppError(502, 'The Instagram page was too large to inspect safely.');
-  return text;
-}
-
-function readMeta(html: string, property: string): string {
-  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const patterns = [
-    new RegExp(`<meta[^>]+property=["']${escaped}["'][^>]+content=["']([^"']*)["']`, 'i'),
-    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${escaped}["']`, 'i'),
-  ];
-  return clean(patterns.map((pattern) => html.match(pattern)?.[1]).find(Boolean));
 }
 
 function safeImage(value: unknown): string {
