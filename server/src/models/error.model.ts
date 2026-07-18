@@ -1,4 +1,4 @@
-export type AppError = Error & { status: 400 | 401 | 404 | 409 | 429 | 503; details?: unknown; isAppError: true };
+export type AppError = Error & { status: 400 | 401 | 404 | 409 | 422 | 429 | 502 | 503; details?: unknown; isAppError: true };
 
 export const createAppError = (status: AppError['status'], message: string, details?: unknown): AppError =>
   Object.assign(new Error(message), { status, details, isAppError: true as const });

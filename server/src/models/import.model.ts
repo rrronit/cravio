@@ -24,7 +24,18 @@ export type ImportJob = {
   progress: number;
   recipeId?: string;
   createdAt: string;
+  caption?: string;
+  extraction?: SourceExtraction;
+  errorMessage?: string;
   events: ImportEvent[];
+};
+
+export type SourceExtraction = {
+  title: string;
+  creator: string;
+  description: string;
+  thumbnail: string;
+  provider: string;
 };
 
 export type ImportJobRow = {
@@ -36,6 +47,9 @@ export type ImportJobRow = {
   progress: number;
   recipe_id: string | null;
   created_at: string;
+  caption: string | null;
+  extraction_json: string | null;
+  error_message: string | null;
 };
 
 export type ImportEventRow = {
@@ -46,3 +60,8 @@ export type ImportEventRow = {
 };
 
 export type ImportCreate = z.infer<typeof importCreateSchema>;
+
+export type ImportQueueMessage = {
+  id: string;
+  userId: string;
+};
