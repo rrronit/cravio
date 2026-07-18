@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@openrouter/sdk": "^0.13.65",
     "hono": "^4.12.30",
+    "html-entities": "^2.6.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {
